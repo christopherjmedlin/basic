@@ -1,0 +1,149 @@
+"Case Sensitive" = False
+
+"Start Symbol"   = <Lines>
+
+{String Chars} = {Printable} - ["]
+
+{WS}           = {Whitespace} - {CR} - {LF}
+
+NewLine        = {CR}{LF}|{CR}
+
+Whitespace     = {WS}+
+
+ID             = {letter}
+
+String         = '"'{String Chars}*'"'
+
+Integer        = {digit}+
+
+<Lines>       ::= Integer <Statements> '\n' <Lines>
+
+                | Integer <Statements> '\n'
+
+<Statements>  ::= <Statement> ':' <Statements>
+
+                | <Statement>
+
+<Statement>   ::= DIM <Array List>
+
+                | END
+
+                | FOR ID '=' <Expression> TO <Expression>
+
+                | FOR ID '=' <Expression> TO <Expression> STEP <Expression>
+
+                | GOTO Integer
+
+                | GOSUB Integer
+
+                | IF <Expression> THEN Integer
+
+                | INPUT String ';' <ID List>
+
+                | LET <Variable> '=' <Expression>
+
+                | NEXT <ID List>
+
+                | ON <Expression> GOTO <Integer List>
+
+                | PRINT <Print list>
+
+                | PRINT TAB '(' <Expression> ')' <Print list>
+
+                | REM {Printable}*
+
+                | RETURN
+
+                | <Variable> '=' <Expression>
+
+<ID List>  ::= ID ',' <ID List>
+
+             | ID
+
+<Array List>      ::= <Array> ',' <Array List>
+
+                    | <Array>
+
+<Integer List>    ::= Integer ',' <Integer List>
+
+                    | Integer
+
+<Expression List> ::= <Expression> ',' <Expression List>
+
+                    | <Expression>
+
+<Print List>      ::= <Expression> ',' <Print List>
+
+                    | <Expression> ';' <Print List>
+
+                    | <Expression>
+
+                    |
+
+<Expression>  ::= <And Exp> OR <Expression>
+
+                | <And Exp>
+
+<And Exp>     ::= <Not Exp> AND <And Exp>
+
+                | <Not Exp>
+
+<Not Exp>     ::= NOT <Compare Exp>
+
+                | <Compare Exp>
+
+<Compare Exp> ::= <Add Exp> '='  <Compare Exp>
+
+                | <Add Exp> '<>' <Compare Exp>
+
+                | <Add Exp> '>'  <Compare Exp>
+
+                | <Add Exp> '>=' <Compare Exp>
+
+                | <Add Exp> '<'  <Compare Exp>
+
+                | <Add Exp> '<=' <Compare Exp>
+
+                | <Add Exp>
+
+<Add Exp>     ::= <Mult Exp> '+' <Add Exp>
+
+                | <Mult Exp> '-' <Add Exp>
+
+                | <Mult Exp>
+
+<Mult Exp>    ::= <Negate Exp> '*' <Mult Exp>
+
+                | <Negate Exp> '/' <Mult Exp>
+
+                | <Negate Exp>
+
+<Negate Exp>  ::= '-' <Power Exp>
+
+                | <Power Exp>
+
+<Power Exp>   ::= <Value> '^' <Power Exp>
+
+                | <Value>
+
+<Value>       ::= '(' <Expression> ')'
+
+                | <Variable>
+
+                | <Function>
+
+                | <Constant>
+
+<Variable>    ::= ID
+
+                | <Array>
+
+<Array>       ::= ID '(' <Expression List> ')'
+
+<Function>    ::= INT '(' <Expression> ')'
+
+                | RND '(' <Expression> ')'
+
+<Constant> ::= Integer
+
+             | String
