@@ -50,15 +50,29 @@ aexprParens = do
 
 aexpr :: Parser Aexpr
 aexpr = try prodExpr <|> try sumExpr <|> try numExpr <|> try varExpr <|> try aexprParens
-{-
-let :: Parser Com
-let = do
+
+letExpr :: Parser Com
+letExpr = do
     string "LET"
     spaces
-    s <- many1 char
+    c <- anyChar
     spaces
     char '='
     spaces
     e <- aexpr
-    return $ LetCom s e
-    -}
+    return $ LetCom c e
+
+toStringExpr :: Parser Sexpr
+toStringExpr = do
+    a <- aexpr
+    return $ ToStringExpr a
+
+sexpr :: Parser Sexpr
+sexpr = toStringExpr
+
+printCom :: Parser Com
+printCom = do
+    string "PRINT"
+    spaces
+    s <- sexpr
+    return $ PrintCom s
