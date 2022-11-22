@@ -5,6 +5,8 @@ import Text.Parsec.String
 import Expr
 import Control.Monad
 import Data.Char
+import Data.Map
+import Data.List (sort, sortOn)
 
 integer :: Parser Integer
 integer = read <$> many1 digit
@@ -51,8 +53,16 @@ aexprParens = do
 aexpr :: Parser Aexpr
 aexpr = try prodExpr <|> try sumExpr <|> try numExpr <|> try varExpr <|> try aexprParens
 
-letExpr :: Parser Com
-letExpr = do
+toStringExpr :: Parser Sexpr
+toStringExpr = do
+    a <- aexpr
+    return $ ToStringExpr a
+
+sexpr :: Parser Sexpr
+sexpr = toStringExpr
+
+letCom :: Parser Com
+letCom = do
     string "LET"
     spaces
     c <- anyChar
@@ -62,17 +72,42 @@ letExpr = do
     e <- aexpr
     return $ LetCom c e
 
-toStringExpr :: Parser Sexpr
-toStringExpr = do
-    a <- aexpr
-    return $ ToStringExpr a
-
-sexpr :: Parser Sexpr
-sexpr = toStringExpr
-
 printCom :: Parser Com
 printCom = do
     string "PRINT"
     spaces
     s <- sexpr
     return $ PrintCom s
+
+com :: Parser Com
+com = printCom <|> letCom
+
+line :: Parser (Integer, Com)
+line = do 
+    i <- integer
+    spaces
+    c <- com
+    -- spaces wil consume newline, don't use
+    (many (char ' ')) 
+    ((const ()) <$> char '\n') <|> eof
+    return (i, c)
+
+lines = many1 line
+
+parseLines :: String -> Either ParseError [(Integer, (Com, Integer))]
+parseLines = (fmap (addNextLines . (sortOn fst))) . parse
+    where parse = runParser Parser.lines () ""
+
+-- after interpreting a command, the interpreter can then get the number of the
+-- command immediately following it to increment the PC (if a goto didn't
+-- happen)
+addNextLines :: [(Integer, Com)] -> [(Integer, (Com, Integer))]
+addNextLines [] = []
+addNextLines [(i, c)] = [(i, (c, -1))]
+addNextLines ((i, c) : xs) = (i, (c, i2)) : addNextLines xs
+    where (i2, c2) = head xs
+
+-- returns the program and the number of the first instruction
+parseProgram :: String -> Either ParseError (Map Integer (Com, Integer), Integer)
+parseProgram str = fmap go (parseLines str)
+    where go ls = (fromList ls, (fst.head) ls)
