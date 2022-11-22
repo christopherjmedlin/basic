@@ -26,20 +26,23 @@ anyAlpha = do
 varExpr :: Parser Aexpr
 varExpr = VarExpr <$> anyAlpha
 
-aexprComb :: Char -> (Aexpr -> Aexpr -> Aexpr) -> Parser Aexpr
-aexprComb symb expr = do
-    a1 <- try aexprParens <|> try numExpr <|> try varExpr
+sumExpr :: Parser Aexpr
+sumExpr = do
+    a1 <- try prodExpr <|> try aexprParens <|> numExpr <|> try varExpr
     spaces
-    char symb
+    char '+'
     spaces
     a2 <- aexpr
-    return $ expr a1 a2
-
-sumExpr :: Parser Aexpr
-sumExpr = aexprComb '+' SumExpr
+    return $ SumExpr a1 a2
 
 prodExpr :: Parser Aexpr
-prodExpr = aexprComb '*' ProdExpr
+prodExpr = do
+    a1 <- try aexprParens <|> numExpr <|> try varExpr
+    spaces
+    char '*'
+    spaces
+    a2 <- try prodExpr <|> try aexprParens <|> numExpr <|> varExpr
+    return $ ProdExpr a1 a2
 
 aexprParens :: Parser Aexpr
 aexprParens = do
@@ -51,7 +54,7 @@ aexprParens = do
     return a
 
 aexpr :: Parser Aexpr
-aexpr = try prodExpr <|> try sumExpr <|> try numExpr <|> try varExpr <|> try aexprParens
+aexpr = try sumExpr <|> try prodExpr <|> try numExpr <|> try varExpr <|> try aexprParens
 
 toStringExpr :: Parser Sexpr
 toStringExpr = do

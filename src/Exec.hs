@@ -5,25 +5,19 @@ import Expr
 import Control.Monad.State.Lazy
 import Control.Monad.Reader
 
--- prog represents the program as a map from a line number to the command at
--- that line number coupled with the number that follows it
-data ProgEnv = ProgEnv {getProg :: Map Integer (Com, Integer)}
--- valMap is a map from a symbol (e.g. X) to the value stored at that symbol
-data ProgState = ProgState {getPC :: Integer, getValMap :: Map Char Integer}
-
 type Exec = ReaderT ProgEnv (StateT ProgState IO)
 
 exec :: Com -> Exec ()
 exec (LetCom c v) = do
     s <- get
     let vm = getValMap s
-    let i = evalAexpr v vm
+    let i = evalAexpr v s
     case i of
         Just result -> put $ ProgState (getPC s) (insert c result vm) 
         Nothing     -> (liftIO . putStrLn) "No such variable"
 exec (PrintCom str) = do
     s <- get
-    let res = evalSexpr str (getValMap s)
+    let res = evalSexpr str s
     case res of
         Just result -> (liftIO . putStrLn) result
         Nothing     -> (liftIO . putStrLn) "No such variable"
