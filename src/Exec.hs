@@ -7,21 +7,33 @@ import Control.Monad.Reader
 
 type Exec = ReaderT ProgEnv (StateT ProgState IO)
 
+terminate :: Exec ()
+terminate = put $ ProgState (-1) empty
+
+errorOrExec :: (a -> Exec ()) -> Either String a -> Exec ()
+errorOrExec f (Left str) = do
+    s <- get
+    (liftIO . putStrLn) $ "Error at " ++ (show (getPC s)) ++ ": " ++ str
+    terminate
+errorOrExec f (Right val) = f val
+
 exec :: Com -> Exec ()
 exec (LetCom c v) = do
     s <- get
     let vm = getValMap s
     let i = evalAexpr v s
-    case i of
-        Just result -> put $ ProgState (getPC s) (insert c result vm) 
-        Nothing     -> (liftIO . putStrLn) "No such variable"
+    errorOrExec (\x -> put $ ProgState (getPC s) (insert c x vm)) i
+    --case i of
+    --    Just result -> put $ ProgState (getPC s) (insert c result vm) 
+    --    Nothing     -> (liftIO . putStrLn) "No such variable"
 exec (PrintCom str) = do
     s <- get
     let res = evalSexpr str s
-    case res of
-        Just result -> (liftIO . putStrLn) result
-        Nothing     -> (liftIO . putStrLn) "No such variable"
-exec EndCom = put $ ProgState (-1) empty
+    errorOrExec (\x -> (liftIO . putStrLn) x) res
+    --case res of
+    --    Just result -> (liftIO . putStrLn) result
+    --    Nothing     -> (liftIO . putStrLn) "No such variable"
+exec EndCom = terminate
 exec (GotoCom i) = do
     s <- get
     put $ ProgState i (getValMap s)

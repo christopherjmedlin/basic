@@ -33,16 +33,19 @@ instance Show Sexpr where
     show (ConcatExpr x y) = show x ++ "; " ++ show y
     show (ToStringExpr x) = show x
 
-evalAexpr :: Aexpr -> ProgState -> Maybe Integer
-evalAexpr (NumExpr i) _ = Just i
-evalAexpr (VarExpr c) s = Data.Map.Strict.lookup c (getValMap s)
+evalAexpr :: Aexpr -> ProgState -> Either String Integer
+evalAexpr (NumExpr i) _ = Right i
+evalAexpr (VarExpr c) s = case res of
+    Nothing -> Left ("Variable " ++ [c] ++ " is undefined.")
+    Just i -> Right i
+    where res = Data.Map.Strict.lookup c (getValMap s)
 evalAexpr (SumExpr a1 a2) m = (+) <$> (evalAexpr a1 m) <*> (evalAexpr a2 m)
 evalAexpr (ProdExpr a1 a2) m = (*) <$> (evalAexpr a1 m) <*> (evalAexpr a2 m)
 
-evalSexpr :: Sexpr -> ProgState -> Maybe String
-evalSexpr (LiteralExpr s) _ = Just s
+evalSexpr :: Sexpr -> ProgState -> Either String String
+evalSexpr (LiteralExpr s) _ = Right s
 evalSexpr (ConcatExpr s1 s2) m = (++) <$> (evalSexpr s1 m) <*> (evalSexpr s2 m)
-evalSexpr (ToStringExpr a) m = show <$> evalAexpr a m 
+evalSexpr (ToStringExpr a) m = show <$> evalAexpr a m
 
 -- 10 LET A = 2
 -- 20 LET B = 3
