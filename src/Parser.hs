@@ -64,6 +64,20 @@ toStringExpr = do
 sexpr :: Parser Sexpr
 sexpr = toStringExpr
 
+charToComp :: Char -> (Aexpr -> Aexpr -> Bexpr)
+charToComp '=' = EqExpr
+charToComp '>' = GeExpr
+charToComp '<' = LeExpr
+
+bexpr :: Parser Bexpr
+bexpr = do
+    a1 <- aexpr
+    spaces
+    c <- char '=' <|> char '<' <|> char '>'
+    spaces
+    a2 <- aexpr
+    return $ (charToComp c) a1 a2
+
 letCom :: Parser Com
 letCom = do
     string "LET"
@@ -92,8 +106,19 @@ gotoCom = do
     i <- integer
     return $ GotoCom i
 
+ifCom :: Parser Com
+ifCom = do
+    string "IF"
+    spaces
+    b <- bexpr
+    spaces
+    string "THEN"
+    spaces
+    i <- integer
+    return $ IfCom b i
+
 com :: Parser Com
-com = printCom <|> letCom <|> endCom <|> gotoCom
+com = printCom <|> letCom <|> endCom <|> gotoCom <|> ifCom
 
 line :: Parser (Integer, Com)
 line = do 

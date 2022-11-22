@@ -17,26 +17,27 @@ errorOrExec f (Left str) = do
     terminate
 errorOrExec f (Right val) = f val
 
+goto :: Integer -> Exec ()
+goto i = do
+    s <- get
+    put $ ProgState i (getValMap s)
+
 exec :: Com -> Exec ()
 exec (LetCom c v) = do
     s <- get
     let vm = getValMap s
     let i = evalAexpr v s
     errorOrExec (\x -> put $ ProgState (getPC s) (insert c x vm)) i
-    --case i of
-    --    Just result -> put $ ProgState (getPC s) (insert c result vm) 
-    --    Nothing     -> (liftIO . putStrLn) "No such variable"
 exec (PrintCom str) = do
     s <- get
     let res = evalSexpr str s
     errorOrExec (\x -> (liftIO . putStrLn) x) res
-    --case res of
-    --    Just result -> (liftIO . putStrLn) result
-    --    Nothing     -> (liftIO . putStrLn) "No such variable"
 exec EndCom = terminate
-exec (GotoCom i) = do
+exec (GotoCom i) = goto i
+exec (IfCom b i) = do
     s <- get
-    put $ ProgState i (getValMap s)
+    let res = evalBexpr b s
+    errorOrExec (\x -> if x then goto i else return ()) res
 
 quitIfFinished :: Exec ()
 quitIfFinished = do

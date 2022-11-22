@@ -7,7 +7,9 @@ data Aexpr = NumExpr Integer | VarExpr Char |
              SumExpr Aexpr Aexpr | ProdExpr Aexpr Aexpr |
              RndExpr Aexpr | IntExpr Aexpr
 data Sexpr = LiteralExpr String | ConcatExpr Sexpr Sexpr | ToStringExpr Aexpr
-data Com = LetCom Char Aexpr | PrintCom Sexpr | EndCom | GotoCom Integer
+data Bexpr = EqExpr Aexpr Aexpr | GeExpr Aexpr Aexpr | LeExpr Aexpr Aexpr
+data Com = LetCom Char Aexpr | PrintCom Sexpr | EndCom | GotoCom Integer |
+           IfCom Bexpr Integer
 
 -- prog represents the program as a map from a line number to the command at
 -- that line number coupled with the number that follows it
@@ -21,6 +23,7 @@ instance Show Com where
     show (PrintCom x) = "PRINT " ++ show x
     show (EndCom) = "END"
     show (GotoCom i) = "GOTO " ++ show i
+    show (IfCom b i) = "IF " ++ show b ++ " THEN " ++ show i
 
 instance Show Aexpr where
     show (NumExpr x) = show x
@@ -33,19 +36,31 @@ instance Show Sexpr where
     show (ConcatExpr x y) = show x ++ "; " ++ show y
     show (ToStringExpr x) = show x
 
-evalAexpr :: Aexpr -> ProgState -> Either String Integer
-evalAexpr (NumExpr i) _ = Right i
-evalAexpr (VarExpr c) s = case res of
+instance Show Bexpr where
+    show (EqExpr a1 a2) = (show a1) ++ " = " ++ (show a2)
+    show (GeExpr a1 a2) = (show a1) ++ " > " ++ (show a2)
+    show (LeExpr a1 a2) = (show a1) ++ " < " ++ (show a2)
+
+evalAexprInt :: Aexpr -> ProgState -> Either String Integer
+evalAexprInt (NumExpr i) _ = Right i
+evalAexprInt (VarExpr c) s = case res of
     Nothing -> Left ("Variable " ++ [c] ++ " is undefined.")
     Just i -> Right i
     where res = Data.Map.Strict.lookup c (getValMap s)
-evalAexpr (SumExpr a1 a2) m = (+) <$> (evalAexpr a1 m) <*> (evalAexpr a2 m)
-evalAexpr (ProdExpr a1 a2) m = (*) <$> (evalAexpr a1 m) <*> (evalAexpr a2 m)
+evalAexprInt (SumExpr a1 a2) m = (+) <$> (evalAexprInt a1 m) <*> (evalAexprInt a2 m)
+evalAexprInt (ProdExpr a1 a2) m = (*) <$> (evalAexprInt a1 m) <*> (evalAexprInt a2 m)
+
+evalAexpr = evalAexprInt
 
 evalSexpr :: Sexpr -> ProgState -> Either String String
 evalSexpr (LiteralExpr s) _ = Right s
 evalSexpr (ConcatExpr s1 s2) m = (++) <$> (evalSexpr s1 m) <*> (evalSexpr s2 m)
 evalSexpr (ToStringExpr a) m = show <$> evalAexpr a m
+
+evalBexpr :: Bexpr -> ProgState -> Either String Bool
+evalBexpr (EqExpr a1 a2) s = (==) <$> (evalAexpr a1 s) <*> (evalAexpr a2 s)
+evalBexpr (GeExpr a1 a2) s = (>) <$> (evalAexpr a1 s) <*> (evalAexpr a2 s)
+evalBexpr (LeExpr a1 a2) s = (<) <$> (evalAexpr a1 s) <*> (evalAexpr a2 s)
 
 -- 10 LET A = 2
 -- 20 LET B = 3
