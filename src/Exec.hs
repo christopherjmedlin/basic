@@ -27,6 +27,7 @@ exec (PrintCom str) = do
     case res of
         Just result -> (liftIO . putStrLn) result
         Nothing     -> (liftIO . putStrLn) "No such variable"
+exec EndCom = put $ ProgState (-1) empty
 
 quitIfFinished :: Exec ()
 quitIfFinished = do

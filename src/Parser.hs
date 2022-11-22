@@ -79,8 +79,11 @@ printCom = do
     s <- sexpr
     return $ PrintCom s
 
+endCom :: Parser Com
+endCom = do {string "END"; return EndCom}
+
 com :: Parser Com
-com = printCom <|> letCom
+com = printCom <|> letCom <|> endCom
 
 line :: Parser (Integer, Com)
 line = do 

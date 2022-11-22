@@ -2,13 +2,14 @@ module Expr (module Expr) where
 
 import Data.Map.Strict
 
-data Com = LetCom Char Aexpr | PrintCom Sexpr
+data Com = LetCom Char Aexpr | PrintCom Sexpr | EndCom
 data Aexpr = NumExpr Integer | VarExpr Char | SumExpr Aexpr Aexpr | ProdExpr Aexpr Aexpr
 data Sexpr = LiteralExpr String | ConcatExpr Sexpr Sexpr | ToStringExpr Aexpr
 
 instance Show Com where
     show (LetCom x a) = "LET " ++ [x] ++ " = " ++ show a
     show (PrintCom x) = "PRINT " ++ show x
+    show (EndCom) = "END"
 
 instance Show Aexpr where
     show (NumExpr x) = show x
