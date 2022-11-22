@@ -22,6 +22,9 @@ exec (PrintCom str) = do
         Just result -> (liftIO . putStrLn) result
         Nothing     -> (liftIO . putStrLn) "No such variable"
 exec EndCom = put $ ProgState (-1) empty
+exec (GotoCom i) = do
+    s <- get
+    put $ ProgState i (getValMap s)
 
 quitIfFinished :: Exec ()
 quitIfFinished = do

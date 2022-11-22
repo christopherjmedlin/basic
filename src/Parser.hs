@@ -85,8 +85,15 @@ printCom = do
 endCom :: Parser Com
 endCom = do {string "END"; return EndCom}
 
+gotoCom :: Parser Com
+gotoCom = do
+    string "GOTO"
+    spaces
+    i <- integer
+    return $ GotoCom i
+
 com :: Parser Com
-com = printCom <|> letCom <|> endCom
+com = printCom <|> letCom <|> endCom <|> gotoCom
 
 line :: Parser (Integer, Com)
 line = do 

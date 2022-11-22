@@ -7,7 +7,7 @@ data Aexpr = NumExpr Integer | VarExpr Char |
              SumExpr Aexpr Aexpr | ProdExpr Aexpr Aexpr |
              RndExpr Aexpr | IntExpr Aexpr
 data Sexpr = LiteralExpr String | ConcatExpr Sexpr Sexpr | ToStringExpr Aexpr
-data Com = LetCom Char Aexpr | PrintCom Sexpr | EndCom
+data Com = LetCom Char Aexpr | PrintCom Sexpr | EndCom | GotoCom Integer
 
 -- prog represents the program as a map from a line number to the command at
 -- that line number coupled with the number that follows it
@@ -20,6 +20,7 @@ instance Show Com where
     show (LetCom x a) = "LET " ++ [x] ++ " = " ++ show a
     show (PrintCom x) = "PRINT " ++ show x
     show (EndCom) = "END"
+    show (GotoCom i) = "GOTO " ++ show i
 
 instance Show Aexpr where
     show (NumExpr x) = show x
