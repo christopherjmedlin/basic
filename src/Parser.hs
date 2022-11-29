@@ -61,8 +61,29 @@ toStringExpr = do
     a <- aexpr
     return $ ToStringExpr a
 
+consumeUntil :: Char -> Parser String
+consumeUntil u = do
+    c <- anyChar
+    if c == u 
+        then 
+            return [] 
+        else do
+            x <- consumeUntil u
+            return (c : x)
+
+literalExpr :: Parser Sexpr
+literalExpr = LiteralExpr <$> (char '"' >> consumeUntil '"')
+
+concatExpr :: Parser Sexpr
+concatExpr = ConcatExpr <$> left <*> sexpr
+    where left = do
+            s <- toStringExpr <|> literalExpr
+            char ';'
+            spaces
+            return s
+
 sexpr :: Parser Sexpr
-sexpr = toStringExpr
+sexpr = try concatExpr <|> toStringExpr <|> literalExpr
 
 charToComp :: Char -> (Aexpr -> Aexpr -> Bexpr)
 charToComp '=' = EqExpr
