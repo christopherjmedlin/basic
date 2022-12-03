@@ -88,7 +88,7 @@ func = do
     return $ nameToFunc name aexpr
 
 aexpr :: Parser Aexpr
-aexpr = func <|> try sumExpr <|> try prodExpr <|> try floatExpr 
+aexpr = try func <|> try sumExpr <|> try prodExpr <|> try floatExpr 
         <|> try numExpr <|> try varExpr <|> try aexprParens
 
 toStringExpr :: Parser Sexpr
@@ -178,8 +178,15 @@ forCom = do
     a2 <- aexpr
     return $ ForCom c (a1, a2)
 
+nextCom :: Parser Com
+nextCom = do
+    string "NEXT"
+    spaces
+    c <- anyChar
+    return $ NextCom c
+
 com :: Parser Com
-com = printCom <|> letCom <|> endCom <|> gotoCom <|> ifCom <|> forCom
+com = printCom <|> letCom <|> endCom <|> gotoCom <|> ifCom <|> forCom <|> nextCom
 
 line :: Parser (Integer, Com)
 line = do 

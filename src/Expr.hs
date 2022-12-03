@@ -11,7 +11,7 @@ data Aexpr = NumExpr Integer | VarExpr Char |
 data Sexpr = LiteralExpr String | ConcatExpr Sexpr Sexpr | ToStringExpr Aexpr
 data Bexpr = EqExpr Aexpr Aexpr | GeExpr Aexpr Aexpr | LeExpr Aexpr Aexpr
 data Com = LetCom Char Aexpr | PrintCom Sexpr | EndCom | GotoCom Integer |
-           IfCom Bexpr Integer | ForCom Char (Aexpr, Aexpr)
+           IfCom Bexpr Integer | ForCom Char (Aexpr, Aexpr) | NextCom Char
 
 data Number = IntNum Integer | FloatNum Double deriving (Eq, Ord)
 
@@ -46,9 +46,24 @@ randomNum g (IntNum i) = (IntNum n, newg)
 -- that line number coupled with the number that follows it
 data ProgEnv = ProgEnv {getProg :: Map Integer (Com, Integer)}
 -- valMap is a map from a symbol (e.g. X) to the value stored at that symbol
+-- iters are the iterator variables mapped to their upper bounds and their
+-- return address
 data ProgState = ProgState {getPC :: Integer, 
                             getValMap :: Map Char Number,
-                            getGen :: StdGen}
+                            getGen :: StdGen,
+                            getIters :: Map Char (Number, Integer)}
+
+putPC :: Integer -> ProgState -> ProgState
+putPC i s = ProgState i (getValMap s) (getGen s) (getIters s)
+
+insertVal :: Char -> Number -> ProgState -> ProgState
+insertVal c n (ProgState pc v g i) = ProgState pc (insert c n v) g i
+
+putGen :: StdGen -> ProgState -> ProgState
+putGen g (ProgState pc v _ i) = ProgState pc v g i
+
+insertIter :: Char -> Number -> Integer -> ProgState -> ProgState
+insertIter c n1 n2 (ProgState pc v g i) = ProgState pc v g (insert c (n1, n2) i)
 
 instance Show Com where
     show (LetCom x a) = "LET " ++ [x] ++ " = " ++ show a
@@ -57,6 +72,7 @@ instance Show Com where
     show (GotoCom i) = "GOTO " ++ show i
     show (IfCom b i) = "IF " ++ show b ++ " THEN " ++ show i
     show (ForCom c (i, j)) = "FOR " ++ [c] ++ " = " ++ show i ++ " TO " ++ show j
+    show (NextCom c) = "NEXT " ++ [c]
 
 instance Show Aexpr where
     show (NumExpr x) = show x
