@@ -12,7 +12,7 @@ data Sexpr = LiteralExpr String | ConcatExpr Sexpr Sexpr | ToStringExpr Aexpr
 data Bexpr = EqExpr Aexpr Aexpr | GeExpr Aexpr Aexpr | LeExpr Aexpr Aexpr
 data Com = LetCom Char Aexpr | PrintCom Sexpr | EndCom | GotoCom Integer |
            IfCom Bexpr Integer | ForCom Char (Aexpr, Aexpr) | NextCom Char |
-           InputCom String Char
+           InputCom String Char | GoSubCom Integer | ReturnCom
 
 data Number = IntNum Integer | FloatNum Double deriving (Eq, Ord)
 
@@ -49,22 +49,43 @@ data ProgEnv = ProgEnv {getProg :: Map Integer (Com, Integer)}
 -- valMap is a map from a symbol (e.g. X) to the value stored at that symbol
 -- iters are the iterator variables mapped to their upper bounds and their
 -- return address
+-- stack is the subroutine return address stack
+-- gotoFlag indicates to the interpreter when a goto has happened, to avoid
+-- going to the next line after it
 data ProgState = ProgState {getPC :: Integer, 
                             getValMap :: Map Char Number,
                             getGen :: StdGen,
-                            getIters :: Map Char (Number, Integer)}
+                            getIters :: Map Char (Number, Integer),
+                            getStack :: [Integer],
+                            gotoFlag :: Bool}
 
 putPC :: Integer -> ProgState -> ProgState
-putPC i s = ProgState i (getValMap s) (getGen s) (getIters s)
+putPC i s = ProgState i (getValMap s) (getGen s) (getIters s) (getStack s) (gotoFlag s)
 
 insertVal :: Char -> Number -> ProgState -> ProgState
-insertVal c n (ProgState pc v g i) = ProgState pc (insert c n v) g i
+insertVal c n (ProgState pc v g i s go) = ProgState pc (insert c n v) g i s go
 
 putGen :: StdGen -> ProgState -> ProgState
-putGen g (ProgState pc v _ i) = ProgState pc v g i
+putGen g (ProgState pc v _ i s go) = ProgState pc v g i s go
 
 insertIter :: Char -> Number -> Integer -> ProgState -> ProgState
-insertIter c n1 n2 (ProgState pc v g i) = ProgState pc v g (insert c (n1, n2) i)
+insertIter c n1 n2 (ProgState pc v g i s go) = ProgState pc v g (insert c (n1, n2) i) s go
+
+pushStack :: Integer -> ProgState -> ProgState
+pushStack i (ProgState p v g it s go) = ProgState p v g it (i : s) go
+
+peekStack :: ProgState -> Integer
+peekStack (ProgState _ _ _ _ s _) = head s
+
+-- doesn't return the result, gotta use peek for that
+popStack :: ProgState -> ProgState
+popStack (ProgState p v g i s go) = ProgState p v g i (tail s) go
+
+setGoto :: ProgState -> ProgState
+setGoto (ProgState p v g it s _) = ProgState p v g it s True
+
+unsetGoto :: ProgState -> ProgState
+unsetGoto (ProgState p v g it s _) = ProgState p v g it s False
 
 instance Show Com where
     show (LetCom x a) = "LET " ++ [x] ++ " = " ++ show a
@@ -76,6 +97,8 @@ instance Show Com where
     show (NextCom c) = "NEXT " ++ [c]
     show (InputCom "" c) = "INPUT " ++ [c]
     show (InputCom s c) = "INPUT \"" ++ s ++ "\"; " ++ [c]
+    show (GoSubCom i) = "GOSUB " ++ show i
+    show (ReturnCom) = "RETURN"
 
 instance Show Aexpr where
     show (NumExpr x) = show x

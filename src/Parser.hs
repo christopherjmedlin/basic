@@ -195,8 +195,19 @@ inputCom = do
         (ToStringExpr (VarExpr c)) -> return $ InputCom "" c
         _ -> fail "Invalid input command"
 
+goSubCom :: Parser Com
+goSubCom = do
+    string "GOSUB"
+    spaces
+    i <- integer
+    return $ GoSubCom i
+
+returnCom :: Parser Com
+returnCom = string "RETURN" >> return ReturnCom
+
 com :: Parser Com
-com = printCom <|> letCom <|> endCom <|> gotoCom <|> try ifCom <|> forCom <|> nextCom <|> inputCom
+com = printCom <|> letCom <|> endCom <|> try gotoCom <|> try goSubCom <|> 
+      try ifCom <|> forCom <|> nextCom <|> inputCom <|> returnCom
 
 line :: Parser (Integer, Com)
 line = do 
