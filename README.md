@@ -1,7 +1,7 @@
 # based
 
 - [X] Easy 1
-- [ ] Easy 2
+- [X] Easy 2
 - [ ] Intermediate
 - [ ] Advanced
 - [ ] I'm Too Young To Die!

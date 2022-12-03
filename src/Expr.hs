@@ -11,7 +11,8 @@ data Aexpr = NumExpr Integer | VarExpr Char |
 data Sexpr = LiteralExpr String | ConcatExpr Sexpr Sexpr | ToStringExpr Aexpr
 data Bexpr = EqExpr Aexpr Aexpr | GeExpr Aexpr Aexpr | LeExpr Aexpr Aexpr
 data Com = LetCom Char Aexpr | PrintCom Sexpr | EndCom | GotoCom Integer |
-           IfCom Bexpr Integer | ForCom Char (Aexpr, Aexpr) | NextCom Char
+           IfCom Bexpr Integer | ForCom Char (Aexpr, Aexpr) | NextCom Char |
+           InputCom Char
 
 data Number = IntNum Integer | FloatNum Double deriving (Eq, Ord)
 
@@ -73,6 +74,7 @@ instance Show Com where
     show (IfCom b i) = "IF " ++ show b ++ " THEN " ++ show i
     show (ForCom c (i, j)) = "FOR " ++ [c] ++ " = " ++ show i ++ " TO " ++ show j
     show (NextCom c) = "NEXT " ++ [c]
+    show (InputCom c) = "INPUT " ++ [c]
 
 instance Show Aexpr where
     show (NumExpr x) = show x

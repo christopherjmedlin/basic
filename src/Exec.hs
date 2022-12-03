@@ -31,16 +31,21 @@ exec (LetCom c v) = do
     let vm = getValMap s
     let i = evalAexpr v s
     errorOrExec (\x -> modify (insertVal c x)) i
+
 exec (PrintCom str) = do
     s <- get
     let res = evalSexpr str s
     errorOrExec (\x -> (liftIO . putStrLn) x) res
+
 exec EndCom = terminate
+
 exec (GotoCom i) = goto i
+
 exec (IfCom b i) = do
     s <- get
     let res = evalBexpr b s
     errorOrExec (\x -> if x then goto i else return ()) res
+
 exec (ForCom c (i, j)) = do
     s <- get
     let res1 = evalAexprInt i s
@@ -51,6 +56,7 @@ exec (ForCom c (i, j)) = do
             errorOrExec (\x -> modify (insertVal c x)) res1
             errorOrExec (\x -> modify (insertIter c x pc)) res2
         else return ()
+
 exec (NextCom c) = do
     s <- get
     let r = M.lookup c (getIters s)
@@ -62,6 +68,10 @@ exec (NextCom c) = do
                 then ((modify (incr c val)) >> (modify (putPC j)))
                 else return ()
     where incr c i = insertVal c (addNums i (IntNum 1))
+
+exec (InputCom c) = do
+    s <- liftIO getLine
+    modify (insertVal c ((IntNum . read) s)) -- TODO floats
                 
 
 quitIfFinished :: Exec ()

@@ -58,11 +58,11 @@ sumExpr = do
 
 prodExpr :: Parser Aexpr
 prodExpr = do
-    a1 <- try aexprParens <|> try floatExpr <|> numExpr <|> try varExpr
+    a1 <- try func <|> try aexprParens <|> try floatExpr <|> numExpr <|> try varExpr
     spaces
     char '*'
     spaces
-    a2 <- try prodExpr <|> try aexprParens <|> try floatExpr <|> numExpr 
+    a2 <- try func <|> try prodExpr <|> try aexprParens <|> try floatExpr <|> numExpr 
           <|> varExpr
     return $ ProdExpr a1 a2
 
@@ -88,7 +88,7 @@ func = do
     return $ nameToFunc name aexpr
 
 aexpr :: Parser Aexpr
-aexpr = try func <|> try sumExpr <|> try prodExpr <|> try floatExpr 
+aexpr = try sumExpr <|> try prodExpr <|> try func <|> try floatExpr 
         <|> try numExpr <|> try varExpr <|> try aexprParens
 
 toStringExpr :: Parser Sexpr
@@ -185,8 +185,15 @@ nextCom = do
     c <- anyChar
     return $ NextCom c
 
+inputCom :: Parser Com
+inputCom = do
+    string "INPUT"
+    spaces
+    c <- anyChar
+    return $ InputCom c
+
 com :: Parser Com
-com = printCom <|> letCom <|> endCom <|> gotoCom <|> ifCom <|> forCom <|> nextCom
+com = printCom <|> letCom <|> endCom <|> gotoCom <|> try ifCom <|> forCom <|> nextCom <|> inputCom
 
 line :: Parser (Integer, Com)
 line = do 
