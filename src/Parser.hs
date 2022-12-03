@@ -11,11 +11,21 @@ import Data.List (sort, sortOn)
 integer :: Parser Integer
 integer = read <$> many1 digit
 
+float :: Parser Double
+float = read <$> do
+    d1 <- many1 digit
+    c <- char '.'
+    d2 <- many1 digit
+    return $ d1 ++ [c] ++ d2
+
 anyString :: Parser String
 anyString = many1 anyChar
 
 numExpr :: Parser Aexpr
 numExpr = NumExpr <$> integer
+
+floatExpr :: Parser Aexpr
+floatExpr = FloatExpr <$> float
 
 anyAlpha :: Parser Char
 anyAlpha = do
@@ -28,7 +38,7 @@ varExpr = VarExpr <$> anyAlpha
 
 sumExpr :: Parser Aexpr
 sumExpr = do
-    a1 <- try prodExpr <|> try aexprParens <|> numExpr <|> try varExpr
+    a1 <- try prodExpr <|> try aexprParens <|> try floatExpr <|> numExpr <|> try varExpr
     spaces
     char '+'
     spaces
@@ -37,11 +47,11 @@ sumExpr = do
 
 prodExpr :: Parser Aexpr
 prodExpr = do
-    a1 <- try aexprParens <|> numExpr <|> try varExpr
+    a1 <- try aexprParens <|> try floatExpr <|> numExpr <|> try varExpr
     spaces
     char '*'
     spaces
-    a2 <- try prodExpr <|> try aexprParens <|> numExpr <|> varExpr
+    a2 <- try prodExpr <|> try aexprParens <|> try floatExpr <|> numExpr <|> varExpr
     return $ ProdExpr a1 a2
 
 aexprParens :: Parser Aexpr
@@ -54,7 +64,7 @@ aexprParens = do
     return a
 
 aexpr :: Parser Aexpr
-aexpr = try sumExpr <|> try prodExpr <|> try numExpr <|> try varExpr <|> try aexprParens
+aexpr = try sumExpr <|> try prodExpr <|> try floatExpr <|> try numExpr <|> try varExpr <|> try aexprParens
 
 toStringExpr :: Parser Sexpr
 toStringExpr = do

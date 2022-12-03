@@ -5,18 +5,36 @@ import System.Random
 
 data Aexpr = NumExpr Integer | VarExpr Char | 
              SumExpr Aexpr Aexpr | ProdExpr Aexpr Aexpr |
-             RndExpr Aexpr | IntExpr Aexpr
+             RndExpr Aexpr | IntExpr Aexpr | FloatExpr Double
 data Sexpr = LiteralExpr String | ConcatExpr Sexpr Sexpr | ToStringExpr Aexpr
 data Bexpr = EqExpr Aexpr Aexpr | GeExpr Aexpr Aexpr | LeExpr Aexpr Aexpr
 data Com = LetCom Char Aexpr | PrintCom Sexpr | EndCom | GotoCom Integer |
            IfCom Bexpr Integer
+
+data Number = IntNum Integer | FloatNum Double deriving (Eq, Ord)
+
+instance Show Number where
+    show (IntNum i) = show i
+    show (FloatNum i) = show i
+
+addNums :: Number -> Number -> Number
+addNums (IntNum i) (FloatNum d) = FloatNum (d + (fromIntegral i))
+addNums (FloatNum d) (IntNum i) = FloatNum (d + (fromIntegral i))
+addNums (IntNum i) (IntNum j) = IntNum (i+j)
+addNums (FloatNum i) (FloatNum j) = FloatNum (i+j)
+
+prodNums :: Number -> Number -> Number
+prodNums (IntNum i) (FloatNum d) = FloatNum (d * (fromIntegral i))
+prodNums (FloatNum d) (IntNum i) = FloatNum (d * (fromIntegral i))
+prodNums (IntNum i) (IntNum j) = IntNum (i*j)
+prodNums (FloatNum i) (FloatNum j) = FloatNum (i*j)
 
 -- prog represents the program as a map from a line number to the command at
 -- that line number coupled with the number that follows it
 data ProgEnv = ProgEnv {getProg :: Map Integer (Com, Integer)}
 -- valMap is a map from a symbol (e.g. X) to the value stored at that symbol
 data ProgState = ProgState {getPC :: Integer, 
-                            getValMap :: Map Char Integer}
+                            getValMap :: Map Char Number}
 
 instance Show Com where
     show (LetCom x a) = "LET " ++ [x] ++ " = " ++ show a
@@ -27,6 +45,7 @@ instance Show Com where
 
 instance Show Aexpr where
     show (NumExpr x) = show x
+    show (FloatExpr x) = show x
     show (VarExpr x) = show x
     show (SumExpr x y) = "(" ++ show x ++ " + " ++ show y ++ ")"
     show (ProdExpr x y) = "(" ++ show x ++ " * " ++ show y ++ ")"
@@ -41,14 +60,15 @@ instance Show Bexpr where
     show (GeExpr a1 a2) = (show a1) ++ " > " ++ (show a2)
     show (LeExpr a1 a2) = (show a1) ++ " < " ++ (show a2)
 
-evalAexprInt :: Aexpr -> ProgState -> Either String Integer
-evalAexprInt (NumExpr i) _ = Right i
+evalAexprInt :: Aexpr -> ProgState -> Either String Number
+evalAexprInt (NumExpr i) _ = Right (IntNum i)
+evalAexprInt (FloatExpr i) _ = Right (FloatNum i)
 evalAexprInt (VarExpr c) s = case res of
     Nothing -> Left ("Variable " ++ [c] ++ " is undefined.")
     Just i -> Right i
     where res = Data.Map.Strict.lookup c (getValMap s)
-evalAexprInt (SumExpr a1 a2) m = (+) <$> (evalAexprInt a1 m) <*> (evalAexprInt a2 m)
-evalAexprInt (ProdExpr a1 a2) m = (*) <$> (evalAexprInt a1 m) <*> (evalAexprInt a2 m)
+evalAexprInt (SumExpr a1 a2) m = addNums <$> (evalAexprInt a1 m) <*> (evalAexprInt a2 m)
+evalAexprInt (ProdExpr a1 a2) m = prodNums <$> (evalAexprInt a1 m) <*> (evalAexprInt a2 m)
 
 evalAexpr = evalAexprInt
 
