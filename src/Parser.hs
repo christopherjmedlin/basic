@@ -8,6 +8,16 @@ import Data.Char
 import Data.Map
 import Data.List (sort, sortOn)
 
+consumeUntil :: Char -> Parser String
+consumeUntil u = do
+    c <- anyChar
+    if c == u 
+        then 
+            return [] 
+        else do
+            x <- consumeUntil u
+            return (c : x)
+
 integer :: Parser Integer
 integer = read <$> many1 digit
 
@@ -38,7 +48,8 @@ varExpr = VarExpr <$> anyAlpha
 
 sumExpr :: Parser Aexpr
 sumExpr = do
-    a1 <- try prodExpr <|> try aexprParens <|> try floatExpr <|> numExpr <|> try varExpr
+    a1 <- try prodExpr <|> try aexprParens <|> try floatExpr <|> numExpr 
+          <|> try varExpr
     spaces
     char '+'
     spaces
@@ -51,7 +62,8 @@ prodExpr = do
     spaces
     char '*'
     spaces
-    a2 <- try prodExpr <|> try aexprParens <|> try floatExpr <|> numExpr <|> varExpr
+    a2 <- try prodExpr <|> try aexprParens <|> try floatExpr <|> numExpr 
+          <|> varExpr
     return $ ProdExpr a1 a2
 
 aexprParens :: Parser Aexpr
@@ -63,23 +75,26 @@ aexprParens = do
     char ')'
     return a
 
+funcs = string "INT" <|> string "RND"
+
+nameToFunc :: String -> (Aexpr -> Aexpr)
+nameToFunc "INT" = IntExpr
+nameToFunc "RND" = RndExpr
+
+func :: Parser Aexpr
+func = do
+    name <- funcs
+    aexpr <- aexprParens
+    return $ nameToFunc name aexpr
+
 aexpr :: Parser Aexpr
-aexpr = try sumExpr <|> try prodExpr <|> try floatExpr <|> try numExpr <|> try varExpr <|> try aexprParens
+aexpr = func <|> try sumExpr <|> try prodExpr <|> try floatExpr 
+        <|> try numExpr <|> try varExpr <|> try aexprParens
 
 toStringExpr :: Parser Sexpr
 toStringExpr = do
     a <- aexpr
     return $ ToStringExpr a
-
-consumeUntil :: Char -> Parser String
-consumeUntil u = do
-    c <- anyChar
-    if c == u 
-        then 
-            return [] 
-        else do
-            x <- consumeUntil u
-            return (c : x)
 
 literalExpr :: Parser Sexpr
 literalExpr = LiteralExpr <$> (char '"' >> consumeUntil '"')

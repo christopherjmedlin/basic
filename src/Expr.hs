@@ -29,6 +29,10 @@ prodNums (FloatNum d) (IntNum i) = FloatNum (d * (fromIntegral i))
 prodNums (IntNum i) (IntNum j) = IntNum (i*j)
 prodNums (FloatNum i) (FloatNum j) = FloatNum (i*j)
 
+toInt :: Number -> Number
+toInt (IntNum i) = (IntNum i)
+toInt (FloatNum i) = IntNum (round i)
+
 -- prog represents the program as a map from a line number to the command at
 -- that line number coupled with the number that follows it
 data ProgEnv = ProgEnv {getProg :: Map Integer (Com, Integer)}
@@ -49,6 +53,8 @@ instance Show Aexpr where
     show (VarExpr x) = show x
     show (SumExpr x y) = "(" ++ show x ++ " + " ++ show y ++ ")"
     show (ProdExpr x y) = "(" ++ show x ++ " * " ++ show y ++ ")"
+    show (RndExpr x) = "RND(" ++ show x ++ ")"
+    show (IntExpr x) = "INT(" ++ show x ++ ")"
 
 instance Show Sexpr where
     show (LiteralExpr x) = "\"" ++ x ++ "\""
@@ -69,6 +75,7 @@ evalAexprInt (VarExpr c) s = case res of
     where res = Data.Map.Strict.lookup c (getValMap s)
 evalAexprInt (SumExpr a1 a2) m = addNums <$> (evalAexprInt a1 m) <*> (evalAexprInt a2 m)
 evalAexprInt (ProdExpr a1 a2) m = prodNums <$> (evalAexprInt a1 m) <*> (evalAexprInt a2 m)
+evalAexprInt (IntExpr a) m = toInt <$> (evalAexprInt a m)
 
 evalAexpr = evalAexprInt
 
