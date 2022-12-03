@@ -39,6 +39,7 @@ library
     , containers
     , mtl
     , random
+    , time
   default-language: Haskell2010
 
 executable based-exe

@@ -47,7 +47,8 @@ randomNum g (IntNum i) = (IntNum n, newg)
 data ProgEnv = ProgEnv {getProg :: Map Integer (Com, Integer)}
 -- valMap is a map from a symbol (e.g. X) to the value stored at that symbol
 data ProgState = ProgState {getPC :: Integer, 
-                            getValMap :: Map Char Number}
+                            getValMap :: Map Char Number,
+                            getGen :: StdGen}
 
 instance Show Com where
     show (LetCom x a) = "LET " ++ [x] ++ " = " ++ show a
@@ -75,6 +76,8 @@ instance Show Bexpr where
     show (GeExpr a1 a2) = (show a1) ++ " > " ++ (show a2)
     show (LeExpr a1 a2) = (show a1) ++ " < " ++ (show a2)
 
+-- variables should not change during evaluation of an expression, so they are
+-- in the reader
 type Eval = ReaderT (Map Char Number) (State StdGen)
 
 evalAexprRS :: Aexpr -> Eval (Either String Number)
@@ -108,7 +111,7 @@ evalAexprRS (RndExpr a) = do
             return $ Right n
 
 evalAexprInt :: Aexpr -> ProgState -> Either String Number
-evalAexprInt a s = evalState (runReaderT rs (getValMap s)) (mkStdGen 0)
+evalAexprInt a s = evalState (runReaderT rs (getValMap s)) (getGen s)
     where rs = evalAexprRS a
 
 evalAexpr = evalAexprInt
