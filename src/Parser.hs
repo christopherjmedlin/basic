@@ -163,8 +163,23 @@ ifCom = do
     i <- integer
     return $ IfCom b i
 
+forCom :: Parser Com
+forCom = do
+    string "FOR"
+    spaces
+    c <- anyChar
+    spaces
+    char '='
+    spaces
+    a1 <- aexpr
+    spaces
+    string "TO"
+    spaces
+    a2 <- aexpr
+    return $ ForCom c (a1, a2)
+
 com :: Parser Com
-com = printCom <|> letCom <|> endCom <|> gotoCom <|> ifCom
+com = printCom <|> letCom <|> endCom <|> gotoCom <|> ifCom <|> forCom
 
 line :: Parser (Integer, Com)
 line = do 
