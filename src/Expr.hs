@@ -2,6 +2,8 @@ module Expr (module Expr) where
 
 import Data.Map.Strict
 import System.Random
+import Control.Monad.Reader
+import Control.Monad.State.Lazy
 
 data Aexpr = NumExpr Integer | VarExpr Char | 
              SumExpr Aexpr Aexpr | ProdExpr Aexpr Aexpr |
@@ -32,6 +34,13 @@ prodNums (FloatNum i) (FloatNum j) = FloatNum (i*j)
 toInt :: Number -> Number
 toInt (IntNum i) = (IntNum i)
 toInt (FloatNum i) = IntNum (round i)
+
+randomNum :: StdGen -> Number -> (Number, StdGen)
+randomNum g (FloatNum i) = (FloatNum n, newg)
+    where (n, newg) = randomR (0, i) g
+randomNum g (IntNum 1) = randomNum g (FloatNum 1.0)
+randomNum g (IntNum i) = (IntNum n, newg)
+    where (n, newg) = randomR (0, i) g
 
 -- prog represents the program as a map from a line number to the command at
 -- that line number coupled with the number that follows it
@@ -66,16 +75,41 @@ instance Show Bexpr where
     show (GeExpr a1 a2) = (show a1) ++ " > " ++ (show a2)
     show (LeExpr a1 a2) = (show a1) ++ " < " ++ (show a2)
 
+type Eval = ReaderT (Map Char Number) (State StdGen)
+
+evalAexprRS :: Aexpr -> Eval (Either String Number)
+evalAexprRS (NumExpr i) = return $ Right (IntNum i)
+evalAexprRS (FloatExpr i) = return $ Right (FloatNum i)
+evalAexprRS (VarExpr c) = do
+    env <- ask
+    let res = Data.Map.Strict.lookup c env
+    case res of
+        Nothing -> return $ Left ("Variable " ++ [c] ++ " is undefined.")
+        Just i -> return $ Right i
+evalAexprRS (SumExpr a1 a2) = do
+    x <- evalAexprRS a1
+    y <- evalAexprRS a2
+    return $ addNums <$> x <*> y
+evalAexprRS (ProdExpr a1 a2) = do
+    x <- evalAexprRS a1
+    y <- evalAexprRS a2
+    return $ prodNums <$> x <*> y
+evalAexprRS (IntExpr a) = do
+    x <- evalAexprRS a
+    return $ toInt <$> x
+evalAexprRS (RndExpr a) = do
+    g <- get
+    x <- evalAexprRS a
+    case x of
+        Left s -> return $ Left s
+        Right i -> do
+            let (n, newg) = randomNum g i
+            put newg
+            return $ Right n
+
 evalAexprInt :: Aexpr -> ProgState -> Either String Number
-evalAexprInt (NumExpr i) _ = Right (IntNum i)
-evalAexprInt (FloatExpr i) _ = Right (FloatNum i)
-evalAexprInt (VarExpr c) s = case res of
-    Nothing -> Left ("Variable " ++ [c] ++ " is undefined.")
-    Just i -> Right i
-    where res = Data.Map.Strict.lookup c (getValMap s)
-evalAexprInt (SumExpr a1 a2) m = addNums <$> (evalAexprInt a1 m) <*> (evalAexprInt a2 m)
-evalAexprInt (ProdExpr a1 a2) m = prodNums <$> (evalAexprInt a1 m) <*> (evalAexprInt a2 m)
-evalAexprInt (IntExpr a) m = toInt <$> (evalAexprInt a m)
+evalAexprInt a s = evalState (runReaderT rs (getValMap s)) (mkStdGen 0)
+    where rs = evalAexprRS a
 
 evalAexpr = evalAexprInt
 
