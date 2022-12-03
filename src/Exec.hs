@@ -69,10 +69,10 @@ exec (NextCom c) = do
                 else return ()
     where incr c i = insertVal c (addNums i (IntNum 1))
 
-exec (InputCom c) = do
+exec (InputCom s c) = do
+    (liftIO . putStrLn) s
     s <- liftIO getLine
-    modify (insertVal c ((IntNum . read) s)) -- TODO floats
-                
+    modify (insertVal c ((IntNum . read) s)) -- TODO floats          
 
 quitIfFinished :: Exec ()
 quitIfFinished = do

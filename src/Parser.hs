@@ -189,8 +189,11 @@ inputCom :: Parser Com
 inputCom = do
     string "INPUT"
     spaces
-    c <- anyChar
-    return $ InputCom c
+    s <- sexpr
+    case s of
+        (ConcatExpr (LiteralExpr s) (ToStringExpr (VarExpr c))) -> return $ InputCom s c
+        (ToStringExpr (VarExpr c)) -> return $ InputCom "" c
+        _ -> fail "Invalid input command"
 
 com :: Parser Com
 com = printCom <|> letCom <|> endCom <|> gotoCom <|> try ifCom <|> forCom <|> nextCom <|> inputCom
