@@ -7,7 +7,8 @@ import Control.Monad.State.Lazy
 
 data Aexpr = NumExpr Integer | VarExpr Char | 
              SumExpr Aexpr Aexpr | ProdExpr Aexpr Aexpr |
-             RndExpr Aexpr | IntExpr Aexpr | FloatExpr Double
+             RndExpr Aexpr | IntExpr Aexpr | FloatExpr Double |
+             DivExpr Aexpr Aexpr | DiffExpr Aexpr Aexpr
 data Sexpr = LiteralExpr String | ConcatExpr Sexpr Sexpr | ToStringExpr Aexpr
 data Bexpr = EqExpr Aexpr Aexpr | GeExpr Aexpr Aexpr | LeExpr Aexpr Aexpr
 data Com = LetCom Char Aexpr | PrintCom Sexpr | EndCom | GotoCom Integer |
@@ -20,6 +21,7 @@ instance Show Number where
     show (IntNum i) = show i
     show (FloatNum i) = show i
 
+-- TODO could probably clean this up with a higher order function
 addNums :: Number -> Number -> Number
 addNums (IntNum i) (FloatNum d) = FloatNum (d + (fromIntegral i))
 addNums (FloatNum d) (IntNum i) = FloatNum (d + (fromIntegral i))
@@ -31,6 +33,18 @@ prodNums (IntNum i) (FloatNum d) = FloatNum (d * (fromIntegral i))
 prodNums (FloatNum d) (IntNum i) = FloatNum (d * (fromIntegral i))
 prodNums (IntNum i) (IntNum j) = IntNum (i*j)
 prodNums (FloatNum i) (FloatNum j) = FloatNum (i*j)
+
+divNums :: Number -> Number -> Number
+divNums (IntNum i) (FloatNum d) = FloatNum (d / (fromIntegral i))
+divNums (FloatNum d) (IntNum i) = FloatNum (d / (fromIntegral i))
+divNums (IntNum i) (IntNum j) = IntNum (quot i j)
+divNums (FloatNum i) (FloatNum j) = FloatNum (i/j)
+
+subNums :: Number -> Number -> Number
+subNums (IntNum i) (FloatNum d) = FloatNum (d - (fromIntegral i))
+subNums (FloatNum d) (IntNum i) = FloatNum (d - (fromIntegral i))
+subNums (IntNum i) (IntNum j) = IntNum (i - j)
+subNums (FloatNum i) (FloatNum j) = FloatNum (i - j)
 
 toInt :: Number -> Number
 toInt (IntNum i) = (IntNum i)
@@ -108,6 +122,8 @@ instance Show Aexpr where
     show (ProdExpr x y) = "(" ++ show x ++ " * " ++ show y ++ ")"
     show (RndExpr x) = "RND(" ++ show x ++ ")"
     show (IntExpr x) = "INT(" ++ show x ++ ")"
+    show (DivExpr x y) = "(" ++ show x ++ " / " ++ show y ++ ")"
+    show (DiffExpr x y) = "(" ++ show x ++ " - " ++ show y ++ ")"
 
 instance Show Sexpr where
     show (LiteralExpr x) = "\"" ++ x ++ "\""
@@ -140,6 +156,14 @@ evalAexprRS (ProdExpr a1 a2) = do
     x <- evalAexprRS a1
     y <- evalAexprRS a2
     return $ prodNums <$> x <*> y
+evalAexprRS (DivExpr a1 a2) = do
+    x <- evalAexprRS a1
+    y <- evalAexprRS a2
+    return $ divNums <$> x <*> y
+evalAexprRS (DiffExpr a1 a2) = do
+    x <- evalAexprRS a1
+    y <- evalAexprRS a2
+    return $ subNums <$> x <*> y
 evalAexprRS (IntExpr a) = do
     x <- evalAexprRS a
     return $ toInt <$> x

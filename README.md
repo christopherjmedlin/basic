@@ -3,8 +3,8 @@
 - [X] Easy 1
 - [X] Easy 2
 - [X] Intermediate 1
-- [ ] Intermediate 2
-- [ ] Advanced
+- [X] Intermediate 2
+- [X] Advanced
 - [ ] I'm Too Young To Die!
 - [ ] Hey, Not Too Rough!
 - [ ] Hurt Me Plenty!

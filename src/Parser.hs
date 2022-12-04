@@ -5,7 +5,7 @@ import Text.Parsec.String
 import Expr
 import Control.Monad
 import Data.Char
-import Data.Map
+import Data.Map hiding (foldr)
 import Data.List (sort, sortOn)
 
 consumeUntil :: Char -> Parser String
@@ -46,25 +46,41 @@ anyAlpha = do
 varExpr :: Parser Aexpr
 varExpr = VarExpr <$> anyAlpha
 
-sumExpr :: Parser Aexpr
-sumExpr = do
-    a1 <- try prodExpr <|> try aexprParens <|> try floatExpr <|> numExpr 
-          <|> try varExpr
-    spaces
-    char '+'
-    spaces
-    a2 <- aexpr
-    return $ SumExpr a1 a2
+emptyParser = do { fail ""; }
 
-prodExpr :: Parser Aexpr
-prodExpr = do
-    a1 <- try func <|> try aexprParens <|> try floatExpr <|> numExpr <|> try varExpr
+-- parses a binary operation. c is the character symbolizing the operation,
+-- cons is the data constructor (e.g. SumExpr), left is the list of allowed
+-- expressions on the left, right is the list of allowed expressions on the
+-- right
+bop :: Char -> (Aexpr -> Aexpr -> Aexpr) -> [Parser Aexpr] 
+                                         -> [Parser Aexpr] 
+                                         -> Parser Aexpr
+bop c cons left right= do
+    a1 <- Prelude.foldr (<|>) emptyParser (fmap try left)
     spaces
-    char '*'
+    char c
     spaces
-    a2 <- try func <|> try prodExpr <|> try aexprParens <|> try floatExpr <|> numExpr 
-          <|> varExpr
-    return $ ProdExpr a1 a2
+    a2 <- Prelude.foldr (<|>) emptyParser (fmap try right)
+    return $ cons a1 a2
+
+-- being the last in the order of operations, any expression can be on the
+-- right or left, as it will take precedence and should be evaluated first. the
+-- exception is diffExpr itself, we cannot have left recursion
+diffExpr = bop '-' DiffExpr
+           [func, sumExpr, divExpr, prodExpr, aexprParens, negExpr, floatExpr, numExpr, varExpr]
+           [aexpr]
+
+sumExpr = bop '+' SumExpr
+          [func, divExpr, prodExpr, aexprParens, negExpr, floatExpr, numExpr, varExpr]
+          [func, sumExpr, divExpr, prodExpr, aexprParens, negExpr, floatExpr, numExpr, varExpr]
+
+divExpr = bop '/' DivExpr
+          [func, prodExpr, aexprParens, negExpr, floatExpr, numExpr, varExpr]
+          [func, divExpr, prodExpr, aexprParens, negExpr, floatExpr, numExpr, varExpr]
+
+prodExpr = bop '*' ProdExpr
+           [func, aexprParens, negExpr, floatExpr, numExpr, varExpr]
+           [func, prodExpr, aexprParens, negExpr, floatExpr, numExpr, varExpr]
 
 aexprParens :: Parser Aexpr
 aexprParens = do
@@ -87,9 +103,16 @@ func = do
     aexpr <- aexprParens
     return $ nameToFunc name aexpr
 
+negExpr :: Parser Aexpr
+negExpr = do
+    char '-'
+    a <- try func <|> try aexprParens <|> try floatExpr <|> numExpr <|> varExpr
+    return $ ProdExpr (NumExpr (-1)) a
+
 aexpr :: Parser Aexpr
-aexpr = try sumExpr <|> try prodExpr <|> try func <|> try floatExpr 
-        <|> try numExpr <|> try varExpr <|> try aexprParens
+aexpr = try diffExpr <|> try sumExpr <|> try divExpr <|> try prodExpr 
+        <|> try func <|> try floatExpr <|> try numExpr <|> try varExpr 
+        <|> try aexprParens <|> try negExpr
 
 toStringExpr :: Parser Sexpr
 toStringExpr = do
