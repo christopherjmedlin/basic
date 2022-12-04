@@ -237,9 +237,20 @@ goSubCom = do
 returnCom :: Parser Com
 returnCom = string "RETURN" >> return ReturnCom
 
-com :: Parser Com
-com = printCom <|> letCom <|> endCom <|> try gotoCom <|> try goSubCom <|> 
-      try ifCom <|> forCom <|> nextCom <|> inputCom <|> returnCom
+seqCom :: Parser Com
+seqCom = do
+    c1 <- normalCom
+    spaces
+    char ':'
+    spaces
+    c2 <- com
+    return $ SeqCom c1 c2
+
+normalCom :: Parser Com
+normalCom = printCom <|> letCom <|> endCom <|> try gotoCom <|> try goSubCom <|> 
+            try ifCom <|> forCom <|> nextCom <|> inputCom <|> returnCom
+
+com = try seqCom <|> normalCom
 
 line :: Parser (Integer, Com)
 line = do 

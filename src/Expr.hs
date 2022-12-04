@@ -116,6 +116,7 @@ instance Show Com where
     show (InputCom s c) = "INPUT \"" ++ s ++ "\"; " ++ [c]
     show (GoSubCom i) = "GOSUB " ++ show i
     show (ReturnCom) = "RETURN"
+    show (SeqCom c1 c2) = show c1 ++ " : " ++ show c2
 
 instance Show Aexpr where
     show (NumExpr x) = show x

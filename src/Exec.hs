@@ -89,7 +89,8 @@ exec ReturnCom = do
     -- do not set gotoflag when returning, else we just call the routine again
     goto (peekStack s)
     modify popStack
-    
+
+exec (SeqCom c1 c2) = exec c1 >> exec c2
 
 quitIfFinished :: Exec ()
 quitIfFinished = do
