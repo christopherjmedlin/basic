@@ -35,6 +35,11 @@ exec (LetCom c v) = do
     let i = evalAexpr v s
     errorOrExec (\x -> modify (insertVal c x)) i
 
+exec (PrintCom (NoNewLineExpr str)) = do
+    s <- get
+    let res = evalSexpr str s
+    errorOrExec (\x -> (liftIO . putStr) x) res
+
 exec (PrintCom str) = do
     s <- get
     let res = evalSexpr str s

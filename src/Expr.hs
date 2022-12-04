@@ -9,11 +9,14 @@ data Aexpr = NumExpr Integer | VarExpr Char |
              SumExpr Aexpr Aexpr | ProdExpr Aexpr Aexpr |
              RndExpr Aexpr | IntExpr Aexpr | FloatExpr Double |
              DivExpr Aexpr Aexpr | DiffExpr Aexpr Aexpr
-data Sexpr = LiteralExpr String | ConcatExpr Sexpr Sexpr | ToStringExpr Aexpr
+-- NoNewLineExpr is to signal to the interpreter in the event that there is a
+-- semicolon at the end of the expression
+data Sexpr = LiteralExpr String | ConcatExpr Sexpr Sexpr | ToStringExpr Aexpr |
+             NoNewLineExpr Sexpr
 data Bexpr = EqExpr Aexpr Aexpr | GeExpr Aexpr Aexpr | LeExpr Aexpr Aexpr
 data Com = LetCom Char Aexpr | PrintCom Sexpr | EndCom | GotoCom Integer |
            IfCom Bexpr Integer | ForCom Char (Aexpr, Aexpr) | NextCom Char |
-           InputCom String Char | GoSubCom Integer | ReturnCom
+           InputCom String Char | GoSubCom Integer | ReturnCom | SeqCom Com Com
 
 data Number = IntNum Integer | FloatNum Double deriving (Eq, Ord)
 
@@ -129,6 +132,7 @@ instance Show Sexpr where
     show (LiteralExpr x) = "\"" ++ x ++ "\""
     show (ConcatExpr x y) = show x ++ "; " ++ show y
     show (ToStringExpr x) = show x
+    show (NoNewLineExpr x) = show x ++ ";"
 
 instance Show Bexpr where
     show (EqExpr a1 a2) = (show a1) ++ " = " ++ (show a2)

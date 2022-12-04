@@ -123,15 +123,24 @@ literalExpr :: Parser Sexpr
 literalExpr = LiteralExpr <$> (char '"' >> consumeUntil '"')
 
 concatExpr :: Parser Sexpr
-concatExpr = ConcatExpr <$> left <*> sexpr
+concatExpr = ConcatExpr <$> left <*> normalSexpr
     where left = do
             s <- toStringExpr <|> literalExpr
             char ';'
-            spaces
+            many (char ' ')
             return s
 
+normalSexpr = try concatExpr <|> toStringExpr <|> literalExpr
+
+-- a Sexpr followed by a ';'
+noNewLineExpr :: Parser Sexpr
+noNewLineExpr = do
+    s <- try concatExpr <|> toStringExpr <|> literalExpr
+    char ';'
+    return $ NoNewLineExpr s
+
 sexpr :: Parser Sexpr
-sexpr = try concatExpr <|> toStringExpr <|> literalExpr
+sexpr = try noNewLineExpr <|> normalSexpr
 
 charToComp :: Char -> (Aexpr -> Aexpr -> Bexpr)
 charToComp '=' = EqExpr

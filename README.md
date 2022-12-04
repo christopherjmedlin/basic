@@ -5,7 +5,7 @@
 - [X] Intermediate 1
 - [X] Intermediate 2
 - [X] Advanced
-- [ ] I'm Too Young To Die!
+- [X] I'm Too Young To Die!
 - [ ] Hey, Not Too Rough!
 - [ ] Hurt Me Plenty!
 - [ ] Ultra-Violence
