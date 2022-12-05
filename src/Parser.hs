@@ -67,20 +67,20 @@ bop c cons left right= do
 -- right or left, as it will take precedence and should be evaluated first. the
 -- exception is diffExpr itself, we cannot have left recursion
 diffExpr = bop '-' DiffExpr
-           [func, sumExpr, divExpr, prodExpr, aexprParens, negExpr, floatExpr, numExpr, varExpr]
+           [sumExpr, divExpr, prodExpr, aexprParens, func, negExpr, floatExpr, numExpr, varExpr]
            [aexpr]
 
 sumExpr = bop '+' SumExpr
-          [func, divExpr, prodExpr, aexprParens, negExpr, floatExpr, numExpr, varExpr]
-          [func, sumExpr, divExpr, prodExpr, aexprParens, negExpr, floatExpr, numExpr, varExpr]
+          [divExpr, prodExpr, aexprParens, func, negExpr, floatExpr, numExpr, varExpr]
+          [sumExpr, divExpr, prodExpr, aexprParens, func, negExpr, floatExpr, numExpr, varExpr]
 
 divExpr = bop '/' DivExpr
-          [func, prodExpr, aexprParens, negExpr, floatExpr, numExpr, varExpr]
-          [func, divExpr, prodExpr, aexprParens, negExpr, floatExpr, numExpr, varExpr]
+          [prodExpr, aexprParens, func, negExpr, floatExpr, numExpr, varExpr]
+          [divExpr, prodExpr, aexprParens, func, negExpr, floatExpr, numExpr, varExpr]
 
 prodExpr = bop '*' ProdExpr
-           [func, aexprParens, negExpr, floatExpr, numExpr, varExpr]
-           [func, prodExpr, aexprParens, negExpr, floatExpr, numExpr, varExpr]
+           [aexprParens, func, negExpr, floatExpr, numExpr, varExpr]
+           [prodExpr, aexprParens, func, negExpr, floatExpr, numExpr, varExpr]
 
 aexprParens :: Parser Aexpr
 aexprParens = do
