@@ -13,7 +13,7 @@ data Aexpr = NumExpr Integer | VarExpr Char |
              SumExpr Aexpr Aexpr | ProdExpr Aexpr Aexpr |
              RndExpr Aexpr | IntExpr Aexpr | FloatExpr Double |
              DivExpr Aexpr Aexpr | DiffExpr Aexpr Aexpr |
-             ArrExpr ArrIndex
+             ArrExpr Char (Aexpr, Aexpr, Aexpr, Aexpr)
 -- NoNewLineExpr is to signal to the interpreter in the event that there is a
 -- semicolon at the end of the expression
 data Sexpr = LiteralExpr String | ConcatExpr Sexpr Sexpr | ToStringExpr Aexpr |
@@ -22,7 +22,7 @@ data Bexpr = EqExpr Aexpr Aexpr | GeExpr Aexpr Aexpr | LeExpr Aexpr Aexpr
 data Com = LetCom Char Aexpr | PrintCom Sexpr | EndCom | GotoCom Integer |
            IfCom Bexpr Integer | ForCom Char (Aexpr, Aexpr) | NextCom Char |
            InputCom String Char | GoSubCom Integer | ReturnCom | SeqCom Com Com |
-           DimCom ArrIndex
+           DimCom [Aexpr]
 
 data Number = IntNum Integer | FloatNum Double deriving (Eq, Ord)
 
@@ -148,6 +148,7 @@ instance Show Com where
     show (GoSubCom i) = "GOSUB " ++ show i
     show (ReturnCom) = "RETURN"
     show (SeqCom c1 c2) = show c1 ++ " : " ++ show c2
+    show (DimCom as) = "DIM " ++ show as
 
 instance Show Aexpr where
     show (NumExpr x) = show x
@@ -159,6 +160,7 @@ instance Show Aexpr where
     show (IntExpr x) = "INT(" ++ show x ++ ")"
     show (DivExpr x y) = "(" ++ show x ++ " / " ++ show y ++ ")"
     show (DiffExpr x y) = "(" ++ show x ++ " - " ++ show y ++ ")"
+    show (ArrExpr c xs) = c : show xs
 
 instance Show Sexpr where
     show (LiteralExpr x) = "\"" ++ x ++ "\""

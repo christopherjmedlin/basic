@@ -5,7 +5,7 @@ import Text.Parsec.String
 import Expr
 import Control.Monad
 import Data.Char
-import Data.Map hiding (foldr)
+import Data.Map hiding (foldr, take)
 import Data.List (sort, sortOn)
 
 consumeUntil :: Char -> Parser String
@@ -17,6 +17,9 @@ consumeUntil u = do
         else do
             x <- consumeUntil u
             return (c : x)
+
+commaSep :: Parser a -> Parser [a]
+commaSep p = p `sepBy` (spaces >> char ',' >> spaces)
 
 integer :: Parser Integer
 integer = read <$> many1 digit
@@ -67,20 +70,23 @@ bop c cons left right= do
 -- right or left, as it will take precedence and should be evaluated first. the
 -- exception is diffExpr itself, we cannot have left recursion
 diffExpr = bop '-' DiffExpr
-           [sumExpr, divExpr, prodExpr, aexprParens, func, negExpr, floatExpr, numExpr, varExpr]
+           [sumExpr, divExpr, prodExpr, simpleAexpr]
            [aexpr]
 
 sumExpr = bop '+' SumExpr
-          [divExpr, prodExpr, aexprParens, func, negExpr, floatExpr, numExpr, varExpr]
-          [sumExpr, divExpr, prodExpr, aexprParens, func, negExpr, floatExpr, numExpr, varExpr]
+          [divExpr, prodExpr, simpleAexpr]
+          [sumExpr, divExpr, prodExpr, simpleAexpr]
 
 divExpr = bop '/' DivExpr
-          [prodExpr, aexprParens, func, negExpr, floatExpr, numExpr, varExpr]
-          [divExpr, prodExpr, aexprParens, func, negExpr, floatExpr, numExpr, varExpr]
+          [prodExpr, simpleAexpr]
+          [divExpr, prodExpr, simpleAexpr]
 
 prodExpr = bop '*' ProdExpr
-           [aexprParens, func, negExpr, floatExpr, numExpr, varExpr]
-           [prodExpr, aexprParens, func, negExpr, floatExpr, numExpr, varExpr]
+           [simpleAexpr]
+           [prodExpr, simpleAexpr]
+
+simpleAexpr = aexprParens <|> try func <|> negExpr <|> try floatExpr 
+              <|> try numExpr <|> try arrExpr <|> try varExpr
 
 aexprParens :: Parser Aexpr
 aexprParens = do
@@ -109,11 +115,26 @@ negExpr = do
     a <- try func <|> try aexprParens <|> try floatExpr <|> numExpr <|> varExpr
     return $ ProdExpr (NumExpr (-1)) a
 
+to4Tup :: [a] -> a -> (a,a,a,a)
+to4Tup [] def = (def,def,def,def)
+to4Tup [x] def = (x,def,def,def)
+to4Tup [x1, x2] def = (x1,x2,def,def)
+to4Tup [x1, x2, x3] def = (x1,x2,x3,def)
+to4Tup [x1, x2, x3, x4] def = (x1,x2,x3,x4)
+to4Tup x def = to4Tup (take 4 x) def
+
+arrExpr :: Parser Aexpr
+arrExpr = do
+    c <- anyChar
+    char '('
+    as <- commaSep aexpr
+    char ')'
+    return $ ArrExpr c (to4Tup as (NumExpr 0))
+
 aexpr :: Parser Aexpr
 aexpr = try diffExpr <|> try sumExpr <|> try divExpr <|> try prodExpr 
-        <|> try func <|> try floatExpr <|> try numExpr <|> try varExpr 
-        <|> try aexprParens <|> try negExpr
-
+        <|> simpleAexpr
+        
 toStringExpr :: Parser Sexpr
 toStringExpr = do
     a <- aexpr
@@ -237,6 +258,13 @@ goSubCom = do
 returnCom :: Parser Com
 returnCom = string "RETURN" >> return ReturnCom
 
+dimCom :: Parser Com
+dimCom = do
+    string "DIM"
+    spaces
+    as <- commaSep arrExpr
+    return $ DimCom as 
+
 seqCom :: Parser Com
 seqCom = do
     c1 <- normalCom
@@ -249,6 +277,7 @@ seqCom = do
 normalCom :: Parser Com
 normalCom = printCom <|> letCom <|> endCom <|> try gotoCom <|> try goSubCom <|> 
             try ifCom <|> forCom <|> nextCom <|> inputCom <|> returnCom
+            <|> dimCom
 
 com = try seqCom <|> normalCom
 
