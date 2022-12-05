@@ -62,6 +62,10 @@ toInt :: Number -> Number
 toInt (IntNum i) = (IntNum i)
 toInt (FloatNum i) = IntNum (round i)
 
+toNormalInt :: Number -> Integer
+toNormalInt (IntNum i) = i
+toNormalInt x = (toNormalInt.toInt) x
+
 randomNum :: StdGen -> Number -> (Number, StdGen)
 randomNum g (FloatNum i) = (FloatNum n, newg)
     where (n, newg) = randomR (0, i) g

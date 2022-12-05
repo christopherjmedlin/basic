@@ -6,6 +6,7 @@ import Control.Monad.State.Lazy
 import Control.Monad.Reader
 import System.Random
 import Data.Time.Clock
+import Data.Either
 
 type Exec = ReaderT ProgEnv (StateT ProgState IO)
 
@@ -91,6 +92,14 @@ exec ReturnCom = do
     modify popStack
 
 exec (SeqCom c1 c2) = exec c1 >> exec c2
+
+exec (DimCom []) = return ()
+exec (DimCom ((ArrExpr c dim) : xs)) = do
+    s <- get
+    let d = tupMap (toNormalInt . (fromRight (IntNum 0)) . ((flip evalAexpr) s)) dim
+    modify $ newArr c d
+    exec (DimCom xs)
+    where tupMap f (x,y,z,k) = (f x, f y, f z, f k)
 
 quitIfFinished :: Exec ()
 quitIfFinished = do
