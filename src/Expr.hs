@@ -1,14 +1,19 @@
 module Expr (module Expr) where
 
-import Data.Map.Strict
+import Prelude hiding (lookup)
+import Data.Map.Strict hiding ((!))
 import System.Random
 import Control.Monad.Reader
 import Control.Monad.State.Lazy
+import Data.Ix
+import Data.Array
+import Data.Maybe (fromJust)
 
 data Aexpr = NumExpr Integer | VarExpr Char | 
              SumExpr Aexpr Aexpr | ProdExpr Aexpr Aexpr |
              RndExpr Aexpr | IntExpr Aexpr | FloatExpr Double |
-             DivExpr Aexpr Aexpr | DiffExpr Aexpr Aexpr
+             DivExpr Aexpr Aexpr | DiffExpr Aexpr Aexpr |
+             ArrExpr ArrIndex
 -- NoNewLineExpr is to signal to the interpreter in the event that there is a
 -- semicolon at the end of the expression
 data Sexpr = LiteralExpr String | ConcatExpr Sexpr Sexpr | ToStringExpr Aexpr |
@@ -16,13 +21,17 @@ data Sexpr = LiteralExpr String | ConcatExpr Sexpr Sexpr | ToStringExpr Aexpr |
 data Bexpr = EqExpr Aexpr Aexpr | GeExpr Aexpr Aexpr | LeExpr Aexpr Aexpr
 data Com = LetCom Char Aexpr | PrintCom Sexpr | EndCom | GotoCom Integer |
            IfCom Bexpr Integer | ForCom Char (Aexpr, Aexpr) | NextCom Char |
-           InputCom String Char | GoSubCom Integer | ReturnCom | SeqCom Com Com
+           InputCom String Char | GoSubCom Integer | ReturnCom | SeqCom Com Com |
+           DimCom ArrIndex
 
 data Number = IntNum Integer | FloatNum Double deriving (Eq, Ord)
 
 instance Show Number where
     show (IntNum i) = show i
     show (FloatNum i) = show i
+
+type ArrIndex = (Integer, Integer, Integer, Integer)
+type Arr = Array ArrIndex Number
 
 -- TODO could probably clean this up with a higher order function
 addNums :: Number -> Number -> Number
@@ -74,35 +83,57 @@ data ProgState = ProgState {getPC :: Integer,
                             getGen :: StdGen,
                             getIters :: Map Char (Number, Integer),
                             getStack :: [Integer],
-                            gotoFlag :: Bool}
+                            gotoFlag :: Bool,
+                            getArrMap :: Map Char Arr}
 
 putPC :: Integer -> ProgState -> ProgState
-putPC i s = ProgState i (getValMap s) (getGen s) (getIters s) (getStack s) (gotoFlag s)
+putPC i s = ProgState i (getValMap s) 
+                        (getGen s)
+                        (getIters s) 
+                        (getStack s) 
+                        (gotoFlag s)
+                        (getArrMap s)
 
 insertVal :: Char -> Number -> ProgState -> ProgState
-insertVal c n (ProgState pc v g i s go) = ProgState pc (insert c n v) g i s go
+insertVal c n (ProgState pc v g i s go a) = ProgState pc (insert c n v) g i s go a
 
 putGen :: StdGen -> ProgState -> ProgState
-putGen g (ProgState pc v _ i s go) = ProgState pc v g i s go
+putGen g (ProgState pc v _ i s go a) = ProgState pc v g i s go a
 
 insertIter :: Char -> Number -> Integer -> ProgState -> ProgState
-insertIter c n1 n2 (ProgState pc v g i s go) = ProgState pc v g (insert c (n1, n2) i) s go
+insertIter c n1 n2 (ProgState pc v g i s go a) = ProgState pc v g (insert c (n1, n2) i) s go a
 
 pushStack :: Integer -> ProgState -> ProgState
-pushStack i (ProgState p v g it s go) = ProgState p v g it (i : s) go
+pushStack i (ProgState p v g it s go a) = ProgState p v g it (i : s) go a
 
 peekStack :: ProgState -> Integer
-peekStack (ProgState _ _ _ _ s _) = head s
+peekStack (ProgState _ _ _ _ s _ _) = head s
 
 -- doesn't return the result, gotta use peek for that
 popStack :: ProgState -> ProgState
-popStack (ProgState p v g i s go) = ProgState p v g i (tail s) go
+popStack (ProgState p v g i s go a) = ProgState p v g i (tail s) go a
 
 setGoto :: ProgState -> ProgState
-setGoto (ProgState p v g it s _) = ProgState p v g it s True
+setGoto (ProgState p v g it s _ a) = ProgState p v g it s True a
 
 unsetGoto :: ProgState -> ProgState
-unsetGoto (ProgState p v g it s _) = ProgState p v g it s False
+unsetGoto (ProgState p v g it s _ a) = ProgState p v g it s False a
+
+newArr :: Char -> ArrIndex -> ProgState -> ProgState
+newArr c dim (ProgState p v g it s go a) = ProgState p v g it s go new
+    where start = (0,0,0,0)
+          end = dim
+          arr = array (start,end) []
+          new = insert c arr a
+
+insertArr :: Char -> ArrIndex -> Number -> ProgState -> ProgState
+insertArr c ix val (ProgState p v g it s go a) = ProgState p v g it s go new
+    where oldarr = fromJust $ lookup c a
+          newarr = oldarr // [(ix, val)]
+          new = insert c newarr a
+
+getArr :: Char -> ArrIndex -> ProgState -> Number
+getArr c ix (ProgState _ _ _ _ _ _ a) = (fromJust (lookup c a)) ! ix
 
 instance Show Com where
     show (LetCom x a) = "LET " ++ [x] ++ " = " ++ show a
@@ -153,6 +184,7 @@ evalAexprRS (VarExpr c) = do
     case res of
         Nothing -> return $ Left ("Variable " ++ [c] ++ " is undefined.")
         Just i -> return $ Right i
+-- TODO modify this to just use applicative instance of ReaderT
 evalAexprRS (SumExpr a1 a2) = do
     x <- evalAexprRS a1
     y <- evalAexprRS a2
@@ -197,18 +229,3 @@ evalBexpr :: Bexpr -> ProgState -> Either String Bool
 evalBexpr (EqExpr a1 a2) s = (==) <$> (evalAexpr a1 s) <*> (evalAexpr a2 s)
 evalBexpr (GeExpr a1 a2) s = (>) <$> (evalAexpr a1 s) <*> (evalAexpr a2 s)
 evalBexpr (LeExpr a1 a2) s = (<) <$> (evalAexpr a1 s) <*> (evalAexpr a2 s)
-
--- 10 LET A = 2
--- 20 LET B = 3
--- 30 LET C = 4
--- 40 PRINT A * (B + C)
--- 50 END
-
--- 20 INPUT H
--- 25 LET X = INT(RND(1)*H+1)
--- 27 PRINT X
--- 30 FOR I = 1 TO H
--- 35 PRINT I
--- 40 IF I = X THEN 60
--- 50 NEXT I
--- 60 END

@@ -10,7 +10,7 @@ import Data.Time.Clock
 type Exec = ReaderT ProgEnv (StateT ProgState IO)
 
 terminate :: Exec ()
-terminate = put $ ProgState (-1) empty (mkStdGen 0) empty [] False
+terminate = put $ ProgState (-1) empty (mkStdGen 0) empty [] False empty
 
 execError :: String -> Exec ()
 execError str = do
@@ -132,4 +132,4 @@ start :: Map Integer (Com, Integer) -> Integer -> IO ()
 start prog init = evalStateT (runReaderT (initGen >> run) env) state
     where
         env   = ProgEnv prog
-        state = ProgState init M.empty (mkStdGen 0) M.empty [] False
+        state = ProgState init M.empty (mkStdGen 0) M.empty [] False empty
