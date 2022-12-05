@@ -181,7 +181,7 @@ letCom :: Parser Com
 letCom = do
     string "LET"
     spaces
-    c <- anyChar
+    c <- try arrExpr <|> varExpr
     spaces
     char '='
     spaces

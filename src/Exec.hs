@@ -10,6 +10,8 @@ import Data.Either
 
 type Exec = ReaderT ProgEnv (StateT ProgState IO)
 
+tupMap f (x,y,z,k) = (f x, f y, f z, f k)
+
 terminate :: Exec ()
 terminate = put $ ProgState (-1) empty (mkStdGen 0) empty [] False empty
 
@@ -29,12 +31,20 @@ goto i = modify (putPC i)
 gotoAndSet :: Integer -> Exec ()
 gotoAndSet i = goto i >> modify setGoto
 
+--TODO a lot of these follow the pattern of evaluate arithmetic expression,
+--then do something with it. can definitely be abstracted with a combinator
 exec :: Com -> Exec ()
-exec (LetCom c v) = do
+exec (LetCom (VarExpr c) v) = do
     s <- get
     let vm = getValMap s
     let i = evalAexpr v s
     errorOrExec (\x -> modify (insertVal c x)) i
+
+exec (LetCom (ArrExpr c ix) v) = do
+    s <- get
+    let d = tupMap (toNormalInt . (fromRight (IntNum 0)) . ((flip evalAexpr) s)) ix
+    let i = evalAexpr v s
+    errorOrExec (\x -> modify (insertArr c d x)) i
 
 exec (PrintCom (NoNewLineExpr str)) = do
     s <- get
@@ -99,7 +109,6 @@ exec (DimCom ((ArrExpr c dim) : xs)) = do
     let d = tupMap (toNormalInt . (fromRight (IntNum 0)) . ((flip evalAexpr) s)) dim
     modify $ newArr c d
     exec (DimCom xs)
-    where tupMap f (x,y,z,k) = (f x, f y, f z, f k)
 
 quitIfFinished :: Exec ()
 quitIfFinished = do

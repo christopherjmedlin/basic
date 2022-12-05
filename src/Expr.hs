@@ -19,7 +19,7 @@ data Aexpr = NumExpr Integer | VarExpr Char |
 data Sexpr = LiteralExpr String | ConcatExpr Sexpr Sexpr | ToStringExpr Aexpr |
              NoNewLineExpr Sexpr
 data Bexpr = EqExpr Aexpr Aexpr | GeExpr Aexpr Aexpr | LeExpr Aexpr Aexpr
-data Com = LetCom Char Aexpr | PrintCom Sexpr | EndCom | GotoCom Integer |
+data Com = LetCom Aexpr Aexpr | PrintCom Sexpr | EndCom | GotoCom Integer |
            IfCom Bexpr Integer | ForCom Char (Aexpr, Aexpr) | NextCom Char |
            InputCom String Char | GoSubCom Integer | ReturnCom | SeqCom Com Com |
            DimCom [Aexpr]
@@ -140,7 +140,7 @@ getArr :: Char -> ArrIndex -> ProgState -> Number
 getArr c ix (ProgState _ _ _ _ _ _ a) = (fromJust (lookup c a)) ! ix
 
 instance Show Com where
-    show (LetCom x a) = "LET " ++ [x] ++ " = " ++ show a
+    show (LetCom x a) = "LET " ++ show x ++ " = " ++ show a
     show (PrintCom x) = "PRINT " ++ show x
     show (EndCom) = "END"
     show (GotoCom i) = "GOTO " ++ show i
