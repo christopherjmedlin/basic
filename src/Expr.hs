@@ -18,7 +18,7 @@ data Aexpr = NumExpr Integer | VarExpr Char |
 -- NoNewLineExpr is to signal to the interpreter in the event that there is a
 -- semicolon at the end of the expression
 data Sexpr = LiteralExpr String | ConcatExpr Sexpr Sexpr | ToStringExpr Aexpr |
-             NoNewLineExpr Sexpr | TabExpr Integer | NoNewTabExpr String
+             NoNewLineExpr Sexpr | TabExpr Integer | NoNewTabExpr Sexpr
 data Bexpr = EqExpr Aexpr Aexpr | GeExpr Aexpr Aexpr | LeExpr Aexpr Aexpr |
              GeqExpr Aexpr Aexpr | LeqExpr Aexpr Aexpr | NeqExpr Aexpr Aexpr
 data Com = LetCom Aexpr Aexpr | PrintCom Sexpr | EndCom | GotoCom Integer |

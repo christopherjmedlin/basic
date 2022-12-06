@@ -168,7 +168,7 @@ noNewTabExpr = do
     return $ NoNewTabExpr s
 
 sexpr :: Parser Sexpr
-sexpr = try noNewLineExpr <|> normalSexpr
+sexpr = try noNewTabExpr <|> try noNewLineExpr <|> normalSexpr
 
 strToComp :: String -> (Aexpr -> Aexpr -> Bexpr)
 strToComp "=" = EqExpr
