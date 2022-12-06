@@ -146,26 +146,34 @@ literalExpr = LiteralExpr <$> (char '"' >> consumeUntil '"')
 concatExpr :: Parser Sexpr
 concatExpr = ConcatExpr <$> left <*> normalSexpr
     where left = do
-            s <- toStringExpr <|> literalExpr
+            s <- try concatTabExpr <|> toStringExpr <|> literalExpr
             char ';'
             many (char ' ')
             return s
 
-normalSexpr = try concatExpr <|> toStringExpr <|> literalExpr
+normalSexpr = try concatExpr <|> try concatTabExpr <|> toStringExpr <|> literalExpr
 
 -- a Sexpr followed by a ';'
 noNewLineExpr :: Parser Sexpr
 noNewLineExpr = do
-    s <- try concatExpr <|> toStringExpr <|> literalExpr
+    s <- normalSexpr
     char ';'
     return $ NoNewLineExpr s
 
 -- a Sexpr followed by a ','
 noNewTabExpr :: Parser Sexpr
 noNewTabExpr = do
-    s <- try concatExpr <|> toStringExpr <|> literalExpr
+    s <- normalSexpr
     char ','
     return $ NoNewTabExpr s
+
+concatTabExpr :: Parser Sexpr
+concatTabExpr = ConcatTabExpr <$> left <*> normalSexpr
+    where left = do
+            s <- try concatExpr <|> toStringExpr <|> literalExpr
+            char ','
+            many (char ' ')
+            return s
 
 sexpr :: Parser Sexpr
 sexpr = try noNewTabExpr <|> try noNewLineExpr <|> normalSexpr
@@ -201,9 +209,10 @@ letCom = do
 printCom :: Parser Com
 printCom = do
     string "PRINT"
-    spaces
-    s <- sexpr
-    return $ PrintCom s
+    s <- try $ (do {many (char ' '); optionMaybe sexpr})
+    case s of
+        Just s -> return $ PrintCom s
+        Nothing -> return $ PrintCom $ LiteralExpr ""
 
 endCom :: Parser Com
 endCom = do {string "END"; return EndCom}

@@ -18,7 +18,8 @@ data Aexpr = NumExpr Integer | VarExpr Char |
 -- NoNewLineExpr is to signal to the interpreter in the event that there is a
 -- semicolon at the end of the expression
 data Sexpr = LiteralExpr String | ConcatExpr Sexpr Sexpr | ToStringExpr Aexpr |
-             NoNewLineExpr Sexpr | TabExpr Integer | NoNewTabExpr Sexpr
+             NoNewLineExpr Sexpr | TabExpr Integer | NoNewTabExpr Sexpr |
+             ConcatTabExpr Sexpr Sexpr
 data Bexpr = EqExpr Aexpr Aexpr | GeExpr Aexpr Aexpr | LeExpr Aexpr Aexpr |
              GeqExpr Aexpr Aexpr | LeqExpr Aexpr Aexpr | NeqExpr Aexpr Aexpr
 data Com = LetCom Aexpr Aexpr | PrintCom Sexpr | EndCom | GotoCom Integer |
@@ -176,6 +177,8 @@ instance Show Sexpr where
     show (ConcatExpr x y) = show x ++ "; " ++ show y
     show (ToStringExpr x) = show x
     show (NoNewLineExpr x) = show x ++ ";"
+    show (NoNewTabExpr x) = show x ++ ","
+    show (ConcatTabExpr x y) = show x ++ ", " ++ show y
 
 instance Show Bexpr where
     show (EqExpr a1 a2) = (show a1) ++ " = " ++ (show a2)
@@ -246,6 +249,7 @@ evalAexpr a s = fst (runEvalAexpr a s)
 evalSexpr :: Sexpr -> ProgState -> Either String String
 evalSexpr (LiteralExpr s) _ = Right s
 evalSexpr (ConcatExpr s1 s2) m = (++) <$> (evalSexpr s1 m) <*> (evalSexpr s2 m)
+evalSexpr (ConcatTabExpr s1 s2) m = (++ "\t") <$> ((++) <$> (evalSexpr s1 m) <*> (evalSexpr s2 m))
 evalSexpr (ToStringExpr a) m = (++ " ") . show <$> evalAexpr a m
 evalSexpr (TabExpr i) _  = Right (replicate (fromIntegral i) ' ')
 
