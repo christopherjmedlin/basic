@@ -160,6 +160,13 @@ noNewLineExpr = do
     char ';'
     return $ NoNewLineExpr s
 
+-- a Sexpr followed by a ','
+noNewTabExpr :: Parser Sexpr
+noNewTabExpr = do
+    s <- try concatExpr <|> toStringExpr <|> literalExpr
+    char ','
+    return $ NoNewTabExpr s
+
 sexpr :: Parser Sexpr
 sexpr = try noNewLineExpr <|> normalSexpr
 

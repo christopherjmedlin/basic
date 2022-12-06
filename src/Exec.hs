@@ -23,7 +23,7 @@ execError str = do
     s <- get
     (liftIO . putStrLn) $ "Error at " ++ (show (getPC s)) ++ ": " ++ str
     terminate
-    
+
 errorOrExec :: (a -> Exec ()) -> Either String a -> Exec ()
 errorOrExec f (Left str) = execError str
 errorOrExec f (Right val) = f val
@@ -61,6 +61,11 @@ exec (PrintCom (NoNewLineExpr str)) = do
     let res = evalSexpr str s
     errorOrExec (\x -> (liftIO . putStr) x) res
 
+exec (PrintCom (NoNewTabExpr str)) = do
+    s <- get
+    let res = evalSexpr str s
+    errorOrExec (\x -> (liftIO . putStr) (x ++ "\t")) res
+
 exec (PrintCom str) = do
     s <- get
     let res = evalSexpr str s
@@ -94,7 +99,7 @@ exec (NextCom (c : cs)) = do
         Nothing -> execError ("No such iterator: " ++ [c])
         Just (i, j, k) -> do
             let val = maybe (IntNum 0) id (M.lookup c (getValMap s))
-            if (addNums val k) <= i 
+            if (addNums val k) <= i
                 then ((modify (incr c val k)) >> (modify (putPC j)))
                 else exec (NextCom cs)
     where incr c i k = insertVal c (addNums i k)
@@ -102,7 +107,7 @@ exec (NextCom (c : cs)) = do
 exec (InputCom s c) = do
     (liftIO . putStrLn) s
     s <- liftIO getLine
-    modify (insertVal c ((IntNum . read) s)) -- TODO floats          
+    modify (insertVal c ((IntNum . read) s)) -- TODO floats
 
 exec (GoSubCom i) = do
     s <- get
