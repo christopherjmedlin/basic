@@ -10,7 +10,7 @@ import Data.Array
 import Data.Maybe (fromJust)
 import Data.Either
 
-data Aexpr = NumExpr Integer | VarExpr Char | 
+data Aexpr = NumExpr Integer | VarExpr Char |
              SumExpr Aexpr Aexpr | ProdExpr Aexpr Aexpr |
              RndExpr Aexpr | IntExpr Aexpr | FloatExpr Double |
              DivExpr Aexpr Aexpr | DiffExpr Aexpr Aexpr |
@@ -18,7 +18,7 @@ data Aexpr = NumExpr Integer | VarExpr Char |
 -- NoNewLineExpr is to signal to the interpreter in the event that there is a
 -- semicolon at the end of the expression
 data Sexpr = LiteralExpr String | ConcatExpr Sexpr Sexpr | ToStringExpr Aexpr |
-             NoNewLineExpr Sexpr | TabExpr Integer
+             NoNewLineExpr Sexpr | TabExpr Integer | NoNewTabExpr String
 data Bexpr = EqExpr Aexpr Aexpr | GeExpr Aexpr Aexpr | LeExpr Aexpr Aexpr |
              GeqExpr Aexpr Aexpr | LeqExpr Aexpr Aexpr | NeqExpr Aexpr Aexpr
 data Com = LetCom Aexpr Aexpr | PrintCom Sexpr | EndCom | GotoCom Integer |
@@ -84,7 +84,7 @@ data ProgEnv = ProgEnv {getProg :: Map Integer (Com, Integer)}
 -- stack is the subroutine return address stack
 -- gotoFlag indicates to the interpreter when a goto has happened, to avoid
 -- going to the next line after it
-data ProgState = ProgState {getPC :: Integer, 
+data ProgState = ProgState {getPC :: Integer,
                             getValMap :: Map Char Number,
                             getGen :: StdGen,
                             getIters :: Map Char (Number, Integer, Number),
@@ -93,10 +93,10 @@ data ProgState = ProgState {getPC :: Integer,
                             getArrMap :: Map Char Arr}
 
 putPC :: Integer -> ProgState -> ProgState
-putPC i s = ProgState i (getValMap s) 
+putPC i s = ProgState i (getValMap s)
                         (getGen s)
-                        (getIters s) 
-                        (getStack s) 
+                        (getIters s)
+                        (getStack s)
                         (gotoFlag s)
                         (getArrMap s)
 
@@ -147,7 +147,7 @@ instance Show Com where
     show (EndCom) = "END"
     show (GotoCom i) = "GOTO " ++ show i
     show (IfCom b i) = "IF " ++ show b ++ " THEN " ++ show i
-    show (ForCom c (i, j, k)) = "FOR " ++ [c] ++ " = " ++ show i 
+    show (ForCom c (i, j, k)) = "FOR " ++ [c] ++ " = " ++ show i
                                 ++ " TO " ++ show j ++ " STEP " ++ show k
     show (NextCom c) = "NEXT " ++ show [c]
     show (InputCom "" c) = "INPUT " ++ [c]
@@ -199,12 +199,12 @@ evalAexprRS (VarExpr c) = do
         Nothing -> return $ Left ("Variable " ++ [c] ++ " is undefined.")
         Just i -> return $ Right i
 evalAexprRS (ArrExpr c (a1,a2,a3,a4)) = do
-    env <- snd <$> ask 
+    env <- snd <$> ask
     i1 <- (toNormalInt.(fromRight (IntNum 0))) <$> evalAexprRS a1
     i2 <- (toNormalInt.(fromRight (IntNum 0))) <$> evalAexprRS a2
     i3 <- (toNormalInt.(fromRight (IntNum 0))) <$> evalAexprRS a3
     i4 <- (toNormalInt.(fromRight (IntNum 0))) <$> evalAexprRS a4
-    let res = getArr c (i1,i2,i3,i4) env 
+    let res = getArr c (i1,i2,i3,i4) env
     return $ Right res
 -- TODO modify this to just use applicative instance of ReaderT
 evalAexprRS (SumExpr a1 a2) = do
@@ -237,7 +237,7 @@ evalAexprRS (RndExpr a) = do
             return $ Right n
 
 runEvalAexpr :: Aexpr -> ProgState -> (Either String Number, StdGen)
-runEvalAexpr a s = runState (runReaderT rs 
+runEvalAexpr a s = runState (runReaderT rs
                         (getValMap s, getArrMap s)) (getGen s)
     where rs = evalAexprRS a
 

@@ -25,6 +25,8 @@ dependencies:
 - containers
 - time
 - array
+- random
+- mtl
 
 ghc-options:
 - -Wall

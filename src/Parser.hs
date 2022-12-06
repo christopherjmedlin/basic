@@ -11,9 +11,9 @@ import Data.List (sort, sortOn)
 consumeUntil :: Char -> Parser String
 consumeUntil u = do
     c <- anyChar
-    if c == u 
-        then 
-            return [] 
+    if c == u
+        then
+            return []
         else do
             x <- consumeUntil u
             return (c : x)
@@ -55,8 +55,8 @@ emptyParser = do { fail ""; }
 -- cons is the data constructor (e.g. SumExpr), left is the list of allowed
 -- expressions on the left, right is the list of allowed expressions on the
 -- right
-bop :: Char -> (Aexpr -> Aexpr -> Aexpr) -> [Parser Aexpr] 
-                                         -> [Parser Aexpr] 
+bop :: Char -> (Aexpr -> Aexpr -> Aexpr) -> [Parser Aexpr]
+                                         -> [Parser Aexpr]
                                          -> Parser Aexpr
 bop c cons left right= do
     a1 <- Prelude.foldr (<|>) emptyParser (fmap try left)
@@ -85,7 +85,7 @@ prodExpr = bop '*' ProdExpr
            [simpleAexpr]
            [prodExpr, simpleAexpr]
 
-simpleAexpr = aexprParens <|> try func <|> negExpr <|> try floatExpr 
+simpleAexpr = aexprParens <|> try func <|> negExpr <|> try floatExpr
               <|> try numExpr <|> try arrExpr <|> try varExpr
 
 aexprParens :: Parser Aexpr
@@ -132,9 +132,9 @@ arrExpr = do
     return $ ArrExpr c (to4Tup as (NumExpr 0))
 
 aexpr :: Parser Aexpr
-aexpr = try diffExpr <|> try sumExpr <|> try divExpr <|> try prodExpr 
+aexpr = try diffExpr <|> try sumExpr <|> try divExpr <|> try prodExpr
         <|> simpleAexpr
-        
+
 toStringExpr :: Parser Sexpr
 toStringExpr = do
     a <- aexpr
@@ -274,7 +274,7 @@ dimCom = do
     string "DIM"
     spaces
     as <- commaSep arrExpr
-    return $ DimCom as 
+    return $ DimCom as
 
 seqCom :: Parser Com
 seqCom = do
@@ -296,23 +296,23 @@ onGotoCom = do
     spaces
     string "GOTO"
     spaces
-    is <- commaSep integer    
+    is <- commaSep integer
     return $ OnGotoCom c is
 
 normalCom :: Parser Com
-normalCom = try remCom <|> printCom <|> try letCom <|> endCom <|> try gotoCom <|> 
-            try goSubCom <|> try ifCom <|> forCom <|> nextCom <|> inputCom 
+normalCom = try remCom <|> printCom <|> try letCom <|> endCom <|> try gotoCom <|>
+            try goSubCom <|> try ifCom <|> forCom <|> nextCom <|> inputCom
             <|> returnCom <|> dimCom <|> onGotoCom
 
 com = try seqCom <|> normalCom
 
 line :: Parser (Integer, Com)
-line = do 
+line = do
     i <- integer
     spaces
     c <- com
     -- spaces wil consume newline, don't use
-    (many (char ' ')) 
+    (many (char ' '))
     ((const ()) <$> char '\n') <|> eof
     return (i, c)
 
