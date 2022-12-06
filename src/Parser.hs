@@ -163,19 +163,20 @@ noNewLineExpr = do
 sexpr :: Parser Sexpr
 sexpr = try noNewLineExpr <|> normalSexpr
 
-charToComp :: Char -> (Aexpr -> Aexpr -> Bexpr)
-charToComp '=' = EqExpr
-charToComp '>' = GeExpr
-charToComp '<' = LeExpr
+strToComp :: String -> (Aexpr -> Aexpr -> Bexpr)
+strToComp "=" = EqExpr
+strToComp ">" = GeExpr
+strToComp "<" = LeExpr
+strToComp "<>" = NeqExpr
 
 bexpr :: Parser Bexpr
 bexpr = do
     a1 <- aexpr
     spaces
-    c <- char '=' <|> char '<' <|> char '>'
+    c <- string "=" <|> try (string "<>") <|> string "<" <|> string ">"
     spaces
     a2 <- aexpr
-    return $ (charToComp c) a1 a2
+    return $ (strToComp c) a1 a2
 
 letCom :: Parser Com
 letCom = do
@@ -282,9 +283,13 @@ seqCom = do
     c2 <- com
     return $ SeqCom c1 c2
 
+remCom :: Parser Com
+remCom = do {string "REM"; many $ noneOf "\n"; return RemCom;}
+
 normalCom :: Parser Com
-normalCom = printCom <|> letCom <|> endCom <|> try gotoCom <|> try goSubCom <|> 
-            try ifCom <|> forCom <|> nextCom <|> inputCom <|> returnCom
+normalCom = try remCom <|> printCom <|> letCom <|> endCom <|> try gotoCom <|> 
+            try goSubCom <|> try ifCom <|> forCom <|> nextCom <|> inputCom 
+            <|> returnCom
             <|> dimCom
 
 com = try seqCom <|> normalCom

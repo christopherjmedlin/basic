@@ -19,11 +19,12 @@ data Aexpr = NumExpr Integer | VarExpr Char |
 -- semicolon at the end of the expression
 data Sexpr = LiteralExpr String | ConcatExpr Sexpr Sexpr | ToStringExpr Aexpr |
              NoNewLineExpr Sexpr
-data Bexpr = EqExpr Aexpr Aexpr | GeExpr Aexpr Aexpr | LeExpr Aexpr Aexpr
+data Bexpr = EqExpr Aexpr Aexpr | GeExpr Aexpr Aexpr | LeExpr Aexpr Aexpr |
+             NeqExpr Aexpr Aexpr
 data Com = LetCom Aexpr Aexpr | PrintCom Sexpr | EndCom | GotoCom Integer |
            IfCom Bexpr Integer | ForCom Char (Aexpr, Aexpr, Aexpr) | NextCom Char |
            InputCom String Char | GoSubCom Integer | ReturnCom | SeqCom Com Com |
-           DimCom [Aexpr]
+           DimCom [Aexpr] | RemCom
 
 data Number = IntNum Integer | FloatNum Double deriving (Eq, Ord)
 
@@ -155,6 +156,7 @@ instance Show Com where
     show (ReturnCom) = "RETURN"
     show (SeqCom c1 c2) = show c1 ++ " : " ++ show c2
     show (DimCom as) = "DIM " ++ show as
+    show RemCom = ""
 
 instance Show Aexpr where
     show (NumExpr x) = show x
@@ -178,6 +180,7 @@ instance Show Bexpr where
     show (EqExpr a1 a2) = (show a1) ++ " = " ++ (show a2)
     show (GeExpr a1 a2) = (show a1) ++ " > " ++ (show a2)
     show (LeExpr a1 a2) = (show a1) ++ " < " ++ (show a2)
+    show (NeqExpr a1 a2) = (show a1) ++ " <> " ++ (show a2)
 
 -- variables should not change during evaluation of an expression, so they are
 -- in the reader
@@ -240,9 +243,10 @@ evalAexpr = evalAexprInt
 evalSexpr :: Sexpr -> ProgState -> Either String String
 evalSexpr (LiteralExpr s) _ = Right s
 evalSexpr (ConcatExpr s1 s2) m = (++) <$> (evalSexpr s1 m) <*> (evalSexpr s2 m)
-evalSexpr (ToStringExpr a) m = show <$> evalAexpr a m
+evalSexpr (ToStringExpr a) m = (++ " ") . show <$> evalAexpr a m
 
 evalBexpr :: Bexpr -> ProgState -> Either String Bool
 evalBexpr (EqExpr a1 a2) s = (==) <$> (evalAexpr a1 s) <*> (evalAexpr a2 s)
 evalBexpr (GeExpr a1 a2) s = (>) <$> (evalAexpr a1 s) <*> (evalAexpr a2 s)
 evalBexpr (LeExpr a1 a2) s = (<) <$> (evalAexpr a1 s) <*> (evalAexpr a2 s)
+evalBexpr (NeqExpr a1 a2) s = (/=) <$> (evalAexpr a1 s) <*> (evalAexpr a2 s)

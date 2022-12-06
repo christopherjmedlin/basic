@@ -83,7 +83,7 @@ exec (NextCom c) = do
         Nothing -> execError ("No such iterator: " ++ [c])
         Just (i, j, k) -> do
             let val = maybe (IntNum 0) id (M.lookup c (getValMap s))
-            if (addNums val k) < i 
+            if (addNums val k) <= i 
                 then ((modify (incr c val k)) >> (modify (putPC j)))
                 else return ()
     where incr c i k = insertVal c (addNums i k)
@@ -112,6 +112,8 @@ exec (DimCom ((ArrExpr c dim) : xs)) = do
     let d = tupMap (toNormalInt . (fromRight (IntNum 0)) . ((flip evalAexpr) s)) dim
     modify $ newArr c d
     exec (DimCom xs)
+
+exec RemCom = return ()
 
 quitIfFinished :: Exec ()
 quitIfFinished = do

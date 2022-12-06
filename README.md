@@ -7,6 +7,6 @@
 - [X] Advanced
 - [X] I'm Too Young To Die!
 - [ ] Hey, Not Too Rough!
-- [ ] Hurt Me Plenty!
+- [X] Hurt Me Plenty!
 - [ ] Ultra-Violence
 - [ ] Nightmare!
