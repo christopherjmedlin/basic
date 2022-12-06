@@ -12,6 +12,7 @@ import Data.Foldable
 type Exec = ReaderT ProgEnv (StateT ProgState IO)
 
 tupMap f (x,y,z,k) = (f x, f y, f z, f k)
+tupTrav f (x,y,z,k) = do {i1 <- f x; i2 <- f y; i3 <- f z; i4 <- f k; return (i1,i2,i3,i4)}
 
 terminate :: Exec ()
 terminate = put $ ProgState (-1) empty (mkStdGen 0) empty [] False empty
@@ -32,18 +33,12 @@ goto i = modify (putPC i)
 gotoAndSet :: Integer -> Exec ()
 gotoAndSet i = goto i >> modify setGoto
 
-next :: Char -> Exec ()
-next c = do
+evalAndPutGen :: Aexpr -> Exec (Either String Number)
+evalAndPutGen a = do
     s <- get
-    let r = M.lookup c (getIters s)
-    case r of
-        Nothing -> execError ("No such iterator: " ++ [c])
-        Just (i, j, k) -> do
-            let val = maybe (IntNum 0) id (M.lookup c (getValMap s))
-            if (addNums val k) <= i 
-                then ((modify (incr c val k)) >> (modify (putPC j)))
-                else return ()
-    where incr c i k = insertVal c (addNums i k)
+    let (i, g) = runEvalAexpr a s
+    modify $ putGen g
+    return i
 
 --TODO a lot of these follow the pattern of evaluate arithmetic expression,
 --then do something with it. can definitely be abstracted with a combinator
@@ -51,13 +46,13 @@ exec :: Com -> Exec ()
 exec (LetCom (VarExpr c) v) = do
     s <- get
     let vm = getValMap s
-    let i = evalAexpr v s
+    i <- evalAndPutGen v
     errorOrExec (\x -> modify (insertVal c x)) i
 
 exec (LetCom (ArrExpr c ix) v) = do
     s <- get
-    let d = tupMap (toNormalInt . (fromRight (IntNum 0)) . ((flip evalAexpr) s)) ix
-    let i = evalAexpr v s
+    d <- tupTrav (fmap (toNormalInt . (fromRight (IntNum 0))) . evalAndPutGen) ix
+    i <- evalAndPutGen v
     errorOrExec (\x -> modify (insertArr c d x)) i
 
 exec (PrintCom (NoNewLineExpr str)) = do
@@ -81,16 +76,27 @@ exec (IfCom b i) = do
 
 exec (ForCom c (i, j, k)) = do
     s <- get
-    let res1 = evalAexprInt i s
-    let res2 = evalAexprInt j s
-    let res3 = evalAexprInt k s
+    res1 <- evalAndPutGen i
+    res2 <- evalAndPutGen j
+    res3 <- evalAndPutGen k
     let pc = getPC s
     errorOrExec (\x -> modify (insertVal c x)) res1
     let end = fromRight (IntNum pc) res2
     let step = fromRight (IntNum 1) res3
     modify $ insertIter c end pc step
 
-exec (NextCom cs) = traverse_ next cs
+exec (NextCom []) = return ()
+exec (NextCom (c : cs)) = do
+    s <- get
+    let r = M.lookup c (getIters s)
+    case r of
+        Nothing -> execError ("No such iterator: " ++ [c])
+        Just (i, j, k) -> do
+            let val = maybe (IntNum 0) id (M.lookup c (getValMap s))
+            if (addNums val k) <= i 
+                then ((modify (incr c val k)) >> (modify (putPC j)))
+                else exec (NextCom cs)
+    where incr c i k = insertVal c (addNums i k)
 
 exec (InputCom s c) = do
     (liftIO . putStrLn) s
@@ -113,7 +119,7 @@ exec (SeqCom c1 c2) = exec c1 >> exec c2
 exec (DimCom []) = return ()
 exec (DimCom ((ArrExpr c dim) : xs)) = do
     s <- get
-    let d = tupMap (toNormalInt . (fromRight (IntNum 0)) . ((flip evalAexpr) s)) dim
+    d <- tupTrav (fmap (toNormalInt . (fromRight (IntNum 0))) . evalAndPutGen) dim
     modify $ newArr c d
     exec (DimCom xs)
 

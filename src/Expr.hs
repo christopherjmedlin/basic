@@ -235,12 +235,12 @@ evalAexprRS (RndExpr a) = do
             put newg
             return $ Right n
 
-evalAexprInt :: Aexpr -> ProgState -> Either String Number
-evalAexprInt a s = evalState (runReaderT rs 
+runEvalAexpr :: Aexpr -> ProgState -> (Either String Number, StdGen)
+runEvalAexpr a s = runState (runReaderT rs 
                         (getValMap s, getArrMap s)) (getGen s)
     where rs = evalAexprRS a
 
-evalAexpr = evalAexprInt
+evalAexpr a s = fst (runEvalAexpr a s)
 
 evalSexpr :: Sexpr -> ProgState -> Either String String
 evalSexpr (LiteralExpr s) _ = Right s

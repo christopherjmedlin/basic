@@ -8,5 +8,5 @@
 - [X] I'm Too Young To Die!
 - [ ] Hey, Not Too Rough!
 - [X] Hurt Me Plenty!
-- [ ] Ultra-Violence
+- [X] Ultra-Violence
 - [ ] Nightmare!
