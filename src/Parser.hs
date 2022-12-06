@@ -183,8 +183,7 @@ bexpr = do
 
 letCom :: Parser Com
 letCom = do
-    string "LET"
-    spaces
+    optional $ try (do {string "LET"; spaces;})
     c <- try arrExpr <|> varExpr
     spaces
     char '='
@@ -289,11 +288,21 @@ seqCom = do
 remCom :: Parser Com
 remCom = do {string "REM"; many $ noneOf "\n"; return RemCom;}
 
+onGotoCom :: Parser Com
+onGotoCom = do
+    string "ON"
+    spaces
+    c <- anyChar
+    spaces
+    string "GOTO"
+    spaces
+    is <- commaSep integer    
+    return $ OnGotoCom c is
+
 normalCom :: Parser Com
-normalCom = try remCom <|> printCom <|> letCom <|> endCom <|> try gotoCom <|> 
+normalCom = try remCom <|> printCom <|> try letCom <|> endCom <|> try gotoCom <|> 
             try goSubCom <|> try ifCom <|> forCom <|> nextCom <|> inputCom 
-            <|> returnCom
-            <|> dimCom
+            <|> returnCom <|> dimCom <|> onGotoCom
 
 com = try seqCom <|> normalCom
 

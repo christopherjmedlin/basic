@@ -1,5 +1,6 @@
 module Exec where
 
+import Prelude hiding (lookup)
 import Data.Map.Strict as M
 import Expr
 import Control.Monad.State.Lazy
@@ -124,6 +125,13 @@ exec (DimCom ((ArrExpr c dim) : xs)) = do
     exec (DimCom xs)
 
 exec RemCom = return ()
+
+exec (OnGotoCom c is) = do
+    s <- get
+    let v = lookup c (getValMap s)
+    maybe terminate gotoIx (fromIntegral.toNormalInt <$> v)
+    where gotoIx x = gotoAndSet (is !! (x-1))
+
 
 quitIfFinished :: Exec ()
 quitIfFinished = do
