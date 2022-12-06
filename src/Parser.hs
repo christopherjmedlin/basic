@@ -229,7 +229,15 @@ forCom = do
     string "TO"
     spaces
     a2 <- aexpr
-    return $ ForCom c (a1, a2)
+    x <- optionMaybe $ try (do
+        spaces
+        string "STEP"
+        spaces
+        a3 <- aexpr
+        return a3)
+    case x of
+        Nothing -> return $ ForCom c (a1, a2, (NumExpr 1))
+        Just s  -> return $ ForCom c (a1, a2, s)
 
 nextCom :: Parser Com
 nextCom = do

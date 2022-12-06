@@ -21,7 +21,7 @@ data Sexpr = LiteralExpr String | ConcatExpr Sexpr Sexpr | ToStringExpr Aexpr |
              NoNewLineExpr Sexpr
 data Bexpr = EqExpr Aexpr Aexpr | GeExpr Aexpr Aexpr | LeExpr Aexpr Aexpr
 data Com = LetCom Aexpr Aexpr | PrintCom Sexpr | EndCom | GotoCom Integer |
-           IfCom Bexpr Integer | ForCom Char (Aexpr, Aexpr) | NextCom Char |
+           IfCom Bexpr Integer | ForCom Char (Aexpr, Aexpr, Aexpr) | NextCom Char |
            InputCom String Char | GoSubCom Integer | ReturnCom | SeqCom Com Com |
            DimCom [Aexpr]
 
@@ -86,7 +86,7 @@ data ProgEnv = ProgEnv {getProg :: Map Integer (Com, Integer)}
 data ProgState = ProgState {getPC :: Integer, 
                             getValMap :: Map Char Number,
                             getGen :: StdGen,
-                            getIters :: Map Char (Number, Integer),
+                            getIters :: Map Char (Number, Integer, Number),
                             getStack :: [Integer],
                             gotoFlag :: Bool,
                             getArrMap :: Map Char Arr}
@@ -105,8 +105,8 @@ insertVal c n (ProgState pc v g i s go a) = ProgState pc (insert c n v) g i s go
 putGen :: StdGen -> ProgState -> ProgState
 putGen g (ProgState pc v _ i s go a) = ProgState pc v g i s go a
 
-insertIter :: Char -> Number -> Integer -> ProgState -> ProgState
-insertIter c n1 n2 (ProgState pc v g i s go a) = ProgState pc v g (insert c (n1, n2) i) s go a
+insertIter :: Char -> Number -> Integer -> Number -> ProgState -> ProgState
+insertIter c n1 n2 n3 (ProgState pc v g i s go a) = ProgState pc v g (insert c (n1, n2, n3) i) s go a
 
 pushStack :: Integer -> ProgState -> ProgState
 pushStack i (ProgState p v g it s go a) = ProgState p v g it (i : s) go a
@@ -146,7 +146,8 @@ instance Show Com where
     show (EndCom) = "END"
     show (GotoCom i) = "GOTO " ++ show i
     show (IfCom b i) = "IF " ++ show b ++ " THEN " ++ show i
-    show (ForCom c (i, j)) = "FOR " ++ [c] ++ " = " ++ show i ++ " TO " ++ show j
+    show (ForCom c (i, j, k)) = "FOR " ++ [c] ++ " = " ++ show i 
+                                ++ " TO " ++ show j ++ " STEP " ++ show k
     show (NextCom c) = "NEXT " ++ [c]
     show (InputCom "" c) = "INPUT " ++ [c]
     show (InputCom s c) = "INPUT \"" ++ s ++ "\"; " ++ [c]

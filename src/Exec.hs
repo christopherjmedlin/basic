@@ -65,25 +65,28 @@ exec (IfCom b i) = do
     let res = evalBexpr b s
     errorOrExec (\x -> if x then gotoAndSet i else return ()) res
 
-exec (ForCom c (i, j)) = do
+exec (ForCom c (i, j, k)) = do
     s <- get
     let res1 = evalAexprInt i s
     let res2 = evalAexprInt j s
+    let res3 = evalAexprInt k s
     let pc = getPC s
     errorOrExec (\x -> modify (insertVal c x)) res1
-    errorOrExec (\x -> modify (insertIter c x pc)) res2
+    let end = fromRight (IntNum pc) res2
+    let step = fromRight (IntNum 1) res3
+    modify $ insertIter c end pc step
 
 exec (NextCom c) = do
     s <- get
     let r = M.lookup c (getIters s)
     case r of
         Nothing -> execError ("No such iterator: " ++ [c])
-        Just (i, j) -> do
+        Just (i, j, k) -> do
             let val = maybe (IntNum 0) id (M.lookup c (getValMap s))
-            if val < i 
-                then ((modify (incr c val)) >> (modify (putPC j)))
+            if (addNums val k) < i 
+                then ((modify (incr c val k)) >> (modify (putPC j)))
                 else return ()
-    where incr c i = insertVal c (addNums i (IntNum 1))
+    where incr c i k = insertVal c (addNums i k)
 
 exec (InputCom s c) = do
     (liftIO . putStrLn) s
