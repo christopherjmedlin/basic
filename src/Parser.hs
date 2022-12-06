@@ -19,7 +19,7 @@ consumeUntil u = do
             return (c : x)
 
 commaSep :: Parser a -> Parser [a]
-commaSep p = p `sepBy` (spaces >> char ',' >> spaces)
+commaSep p = p `sepBy` ((many (char ' ')) >> char ',' >> (many (char  ' ')))
 
 integer :: Parser Integer
 integer = read <$> many1 digit

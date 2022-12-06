@@ -8,6 +8,7 @@ import Control.Monad.State.Lazy
 import Data.Ix
 import Data.Array
 import Data.Maybe (fromJust)
+import Data.Either
 
 data Aexpr = NumExpr Integer | VarExpr Char | 
              SumExpr Aexpr Aexpr | ProdExpr Aexpr Aexpr |
@@ -136,8 +137,8 @@ insertArr c ix val (ProgState p v g it s go a) = ProgState p v g it s go new
           newarr = oldarr // [(ix, val)]
           new = insert c newarr a
 
-getArr :: Char -> ArrIndex -> ProgState -> Number
-getArr c ix (ProgState _ _ _ _ _ _ a) = (fromJust (lookup c a)) ! ix
+getArr :: Char -> ArrIndex -> Map Char Arr -> Number
+getArr c ix arrs = (fromJust (lookup c arrs)) ! ix
 
 instance Show Com where
     show (LetCom x a) = "LET " ++ show x ++ " = " ++ show a
@@ -179,17 +180,25 @@ instance Show Bexpr where
 
 -- variables should not change during evaluation of an expression, so they are
 -- in the reader
-type Eval = ReaderT (Map Char Number) (State StdGen)
+type Eval = ReaderT (Map Char Number, Map Char Arr) (State StdGen)
 
 evalAexprRS :: Aexpr -> Eval (Either String Number)
 evalAexprRS (NumExpr i) = return $ Right (IntNum i)
 evalAexprRS (FloatExpr i) = return $ Right (FloatNum i)
 evalAexprRS (VarExpr c) = do
-    env <- ask
+    env <- fst <$> ask
     let res = Data.Map.Strict.lookup c env
     case res of
         Nothing -> return $ Left ("Variable " ++ [c] ++ " is undefined.")
         Just i -> return $ Right i
+evalAexprRS (ArrExpr c (a1,a2,a3,a4)) = do
+    env <- snd <$> ask 
+    i1 <- (toNormalInt.(fromRight (IntNum 0))) <$> evalAexprRS a1
+    i2 <- (toNormalInt.(fromRight (IntNum 0))) <$> evalAexprRS a2
+    i3 <- (toNormalInt.(fromRight (IntNum 0))) <$> evalAexprRS a3
+    i4 <- (toNormalInt.(fromRight (IntNum 0))) <$> evalAexprRS a4
+    let res = getArr c (i1,i2,i3,i4) env 
+    return $ Right res
 -- TODO modify this to just use applicative instance of ReaderT
 evalAexprRS (SumExpr a1 a2) = do
     x <- evalAexprRS a1
@@ -221,7 +230,8 @@ evalAexprRS (RndExpr a) = do
             return $ Right n
 
 evalAexprInt :: Aexpr -> ProgState -> Either String Number
-evalAexprInt a s = evalState (runReaderT rs (getValMap s)) (getGen s)
+evalAexprInt a s = evalState (runReaderT rs 
+                        (getValMap s, getArrMap s)) (getGen s)
     where rs = evalAexprRS a
 
 evalAexpr = evalAexprInt
