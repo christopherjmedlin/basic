@@ -4,9 +4,10 @@ import Data.Map.Strict as M
 import Expr
 import Control.Monad.State.Lazy
 import Control.Monad.Reader
-import System.Random
+import System.Random hiding (next)
 import Data.Time.Clock
 import Data.Either
+import Data.Foldable
 
 type Exec = ReaderT ProgEnv (StateT ProgState IO)
 
@@ -30,6 +31,19 @@ goto i = modify (putPC i)
 
 gotoAndSet :: Integer -> Exec ()
 gotoAndSet i = goto i >> modify setGoto
+
+next :: Char -> Exec ()
+next c = do
+    s <- get
+    let r = M.lookup c (getIters s)
+    case r of
+        Nothing -> execError ("No such iterator: " ++ [c])
+        Just (i, j, k) -> do
+            let val = maybe (IntNum 0) id (M.lookup c (getValMap s))
+            if (addNums val k) <= i 
+                then ((modify (incr c val k)) >> (modify (putPC j)))
+                else return ()
+    where incr c i k = insertVal c (addNums i k)
 
 --TODO a lot of these follow the pattern of evaluate arithmetic expression,
 --then do something with it. can definitely be abstracted with a combinator
@@ -76,17 +90,7 @@ exec (ForCom c (i, j, k)) = do
     let step = fromRight (IntNum 1) res3
     modify $ insertIter c end pc step
 
-exec (NextCom c) = do
-    s <- get
-    let r = M.lookup c (getIters s)
-    case r of
-        Nothing -> execError ("No such iterator: " ++ [c])
-        Just (i, j, k) -> do
-            let val = maybe (IntNum 0) id (M.lookup c (getValMap s))
-            if (addNums val k) <= i 
-                then ((modify (incr c val k)) >> (modify (putPC j)))
-                else return ()
-    where incr c i k = insertVal c (addNums i k)
+exec (NextCom cs) = traverse_ next cs
 
 exec (InputCom s c) = do
     (liftIO . putStrLn) s

@@ -168,12 +168,15 @@ strToComp "=" = EqExpr
 strToComp ">" = GeExpr
 strToComp "<" = LeExpr
 strToComp "<>" = NeqExpr
+strToComp "<=" = LeqExpr
+strToComp ">=" = GeqExpr
 
 bexpr :: Parser Bexpr
 bexpr = do
     a1 <- aexpr
     spaces
-    c <- string "=" <|> try (string "<>") <|> string "<" <|> string ">"
+    c <- string "=" <|> try (string "<>") <|> string "<=" <|> string ">=" <|>
+         string "<" <|> string ">"
     spaces
     a2 <- aexpr
     return $ (strToComp c) a1 a2
@@ -244,8 +247,8 @@ nextCom :: Parser Com
 nextCom = do
     string "NEXT"
     spaces
-    c <- anyChar
-    return $ NextCom c
+    cs <- commaSep anyChar
+    return $ NextCom cs
 
 inputCom :: Parser Com
 inputCom = do
