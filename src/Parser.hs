@@ -146,12 +146,20 @@ literalExpr = LiteralExpr <$> (char '"' >> consumeUntil '"')
 concatExpr :: Parser Sexpr
 concatExpr = ConcatExpr <$> left <*> normalSexpr
     where left = do
-            s <- try concatTabExpr <|> toStringExpr <|> literalExpr
+            s <- try concatTabExpr <|> try tabExpr <|> toStringExpr <|> literalExpr
             char ';'
             many (char ' ')
             return s
 
-normalSexpr = try concatExpr <|> try concatTabExpr <|> toStringExpr <|> literalExpr
+tabExpr :: Parser Sexpr
+tabExpr = do
+    string "TAB("
+    i <- integer
+    string ")"
+    return $ TabExpr i
+
+normalSexpr = try concatExpr <|> try concatTabExpr <|> 
+              try tabExpr <|> toStringExpr <|> literalExpr
 
 -- a Sexpr followed by a ';'
 noNewLineExpr :: Parser Sexpr
@@ -170,7 +178,7 @@ noNewTabExpr = do
 concatTabExpr :: Parser Sexpr
 concatTabExpr = ConcatTabExpr <$> left <*> normalSexpr
     where left = do
-            s <- toStringExpr <|> literalExpr
+            s <- try tabExpr <|> toStringExpr <|> literalExpr
             char ','
             many (char ' ')
             return s
@@ -186,15 +194,33 @@ strToComp "<>" = NeqExpr
 strToComp "<=" = LeqExpr
 strToComp ">=" = GeqExpr
 
-bexpr :: Parser Bexpr
-bexpr = do
+comp :: Parser Bexpr
+comp = do
     a1 <- aexpr
     spaces
-    c <- string "=" <|> try (string "<>") <|> string "<=" <|> string ">=" <|>
+    c <- string "=" <|> try (string "<>") <|> try (string "<=") <|> try (string ">=") <|>
          string "<" <|> string ">"
     spaces
     a2 <- aexpr
     return $ (strToComp c) a1 a2
+
+andExpr = do
+    b1 <- comp
+    spaces
+    string "AND"
+    spaces
+    b2 <- try andExpr <|> comp
+    return $ AndExpr b1 b2
+
+orExpr = do
+    b1 <- try andExpr <|> comp
+    spaces
+    string "OR"
+    spaces
+    b2 <- bexpr
+    return $ OrExpr b1 b2
+
+bexpr = try andExpr <|> try orExpr <|> comp
 
 letCom :: Parser Com
 letCom = do
@@ -269,11 +295,14 @@ inputCom :: Parser Com
 inputCom = do
     string "INPUT"
     spaces
-    s <- sexpr
+    s <- literalExpr
+    spaces
+    char ';'
+    spaces
+    cs <- commaSep anyChar
     case s of
-        (ConcatExpr (LiteralExpr s) (ToStringExpr (VarExpr c))) -> return $ InputCom s c
-        (ToStringExpr (VarExpr c)) -> return $ InputCom "" c
-        _ -> fail "Invalid input command"
+        LiteralExpr str -> return $ InputCom str cs
+        _ -> fail "Internal error"
 
 goSubCom :: Parser Com
 goSubCom = do

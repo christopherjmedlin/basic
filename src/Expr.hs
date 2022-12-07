@@ -21,10 +21,11 @@ data Sexpr = LiteralExpr String | ConcatExpr Sexpr Sexpr | ToStringExpr Aexpr |
              NoNewLineExpr Sexpr | TabExpr Integer | NoNewTabExpr Sexpr |
              ConcatTabExpr Sexpr Sexpr
 data Bexpr = EqExpr Aexpr Aexpr | GeExpr Aexpr Aexpr | LeExpr Aexpr Aexpr |
-             GeqExpr Aexpr Aexpr | LeqExpr Aexpr Aexpr | NeqExpr Aexpr Aexpr
+             GeqExpr Aexpr Aexpr | LeqExpr Aexpr Aexpr | NeqExpr Aexpr Aexpr |
+             AndExpr Bexpr Bexpr | OrExpr Bexpr Bexpr
 data Com = LetCom Aexpr Aexpr | PrintCom Sexpr | EndCom | GotoCom Integer |
            IfCom Bexpr Integer | ForCom Char (Aexpr, Aexpr, Aexpr) | NextCom [Char] |
-           InputCom String Char | GoSubCom Integer | ReturnCom | SeqCom Com Com |
+           InputCom String [Char] | GoSubCom Integer | ReturnCom | SeqCom Com Com |
            DimCom [Aexpr] | RemCom | OnGotoCom Char [Integer]
 
 data Number = IntNum Integer | FloatNum Double deriving (Eq, Ord)
@@ -104,6 +105,9 @@ putPC i s = ProgState i (getValMap s)
 insertVal :: Char -> Number -> ProgState -> ProgState
 insertVal c n (ProgState pc v g i s go a) = ProgState pc (insert c n v) g i s go a
 
+delVal :: Char -> ProgState -> ProgState
+delVal c (ProgState pc v g i s go a) = ProgState pc (delete c v) g i s go a
+
 putGen :: StdGen -> ProgState -> ProgState
 putGen g (ProgState pc v _ i s go a) = ProgState pc v g i s go a
 
@@ -131,7 +135,7 @@ newArr c dim (ProgState p v g it s go a) = ProgState p v g it s go new
     where start = (0,0,0,0)
           end = dim
           arr = array (start,end) []
-          new = insert c arr a
+          new = insert c (arr // [(i,(IntNum 0)) | i <- indices arr]) a
 
 insertArr :: Char -> ArrIndex -> Number -> ProgState -> ProgState
 insertArr c ix val (ProgState p v g it s go a) = ProgState p v g it s go new
@@ -151,8 +155,8 @@ instance Show Com where
     show (ForCom c (i, j, k)) = "FOR " ++ [c] ++ " = " ++ show i
                                 ++ " TO " ++ show j ++ " STEP " ++ show k
     show (NextCom c) = "NEXT " ++ show [c]
-    show (InputCom "" c) = "INPUT " ++ [c]
-    show (InputCom s c) = "INPUT \"" ++ s ++ "\"; " ++ [c]
+    show (InputCom "" c) = "INPUT " ++ show c
+    show (InputCom s c) = "INPUT \"" ++ s ++ "\"; " ++ show c
     show (GoSubCom i) = "GOSUB " ++ show i
     show (ReturnCom) = "RETURN"
     show (SeqCom c1 c2) = show c1 ++ " : " ++ show c2
@@ -179,6 +183,7 @@ instance Show Sexpr where
     show (NoNewLineExpr x) = show x ++ ";"
     show (NoNewTabExpr x) = show x ++ ","
     show (ConcatTabExpr x y) = show x ++ ", " ++ show y
+    show (TabExpr i) = "TAB(" ++ show i ++ ")"
 
 instance Show Bexpr where
     show (EqExpr a1 a2) = (show a1) ++ " = " ++ (show a2)
@@ -187,6 +192,8 @@ instance Show Bexpr where
     show (NeqExpr a1 a2) = (show a1) ++ " <> " ++ (show a2)
     show (LeqExpr a1 a2) = (show a1) ++ " <= " ++ (show a2)
     show (GeqExpr a1 a2) = (show a1) ++ " >= " ++ (show a2)
+    show (AndExpr a1 a2) = (show a1) ++ " AND " ++ (show a2)
+    show (OrExpr a1 a2) = (show a1) ++ " OR " ++ (show a2)
 
 -- variables should not change during evaluation of an expression, so they are
 -- in the reader
@@ -260,3 +267,5 @@ evalBexpr (LeExpr a1 a2) s = (<) <$> (evalAexpr a1 s) <*> (evalAexpr a2 s)
 evalBexpr (NeqExpr a1 a2) s = (/=) <$> (evalAexpr a1 s) <*> (evalAexpr a2 s)
 evalBexpr (LeqExpr a1 a2) s = (<=) <$> (evalAexpr a1 s) <*> (evalAexpr a2 s)
 evalBexpr (GeqExpr a1 a2) s = (>=) <$> (evalAexpr a1 s) <*> (evalAexpr a2 s)
+evalBexpr (AndExpr b1 b2) s = (&&) <$> (evalBexpr b1 s) <*> (evalBexpr b1 s)
+evalBexpr (OrExpr b1 b2) s = (||) <$> (evalBexpr b1 s) <*> (evalBexpr b1 s)

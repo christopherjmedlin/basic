@@ -41,6 +41,14 @@ evalAndPutGen a = do
     modify $ putGen g
     return i
 
+input :: [Char] -> Exec ()
+input [] = return ()
+input (c : cs) = do
+    s <- liftIO getLine
+    modify (insertVal c ((IntNum . read) s)) -- TODO floats
+    input cs
+
+
 --TODO a lot of these follow the pattern of evaluate arithmetic expression,
 --then do something with it. can definitely be abstracted with a combinator
 exec :: Com -> Exec ()
@@ -100,16 +108,14 @@ exec (NextCom (c : cs)) = do
     case r of
         Nothing -> execError ("No such iterator: " ++ [c])
         Just (i, j, k) -> do
+            let comp = if (k < IntNum 0) then (>=) else (<=)
             let val = maybe (IntNum 0) id (M.lookup c (getValMap s))
-            if (addNums val k) <= i
+            if (addNums val k) `comp` i
                 then ((modify (incr c val k)) >> (modify (putPC j))) >> modify setGoto
-                else exec (NextCom cs)
+                else (modify $ delVal c) >> (exec (NextCom cs))
     where incr c i k = insertVal c (addNums i k)
 
-exec (InputCom s c) = do
-    (liftIO . putStrLn) s
-    s <- liftIO getLine
-    modify (insertVal c ((IntNum . read) s)) -- TODO floats
+exec (InputCom s cs) = (liftIO . putStrLn) s >> input cs
 
 exec (GoSubCom i) = do
     s <- get
