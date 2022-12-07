@@ -6,7 +6,7 @@
 - [X] Intermediate 2
 - [X] Advanced
 - [X] I'm Too Young To Die!
-- [X] Hey, Not Too Rough! (tabbing error on last line)
+- [X] Hey, Not Too Rough!
 - [X] Hurt Me Plenty!
 - [X] Ultra-Violence
-- [ ] Nightmare!
+- [X] Nightmare!
