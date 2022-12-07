@@ -16,7 +16,7 @@ tupMap f (x,y,z,k) = (f x, f y, f z, f k)
 tupTrav f (x,y,z,k) = do {i1 <- f x; i2 <- f y; i3 <- f z; i4 <- f k; return (i1,i2,i3,i4)}
 
 terminate :: Exec ()
-terminate = put $ ProgState (-1) empty (mkStdGen 0) empty [] False empty
+terminate = put $ ProgState (-1) empty (mkStdGen 0) empty [] False empty False
 
 execError :: String -> Exec ()
 execError str = do
@@ -99,6 +99,12 @@ exec (ForCom c (i, j, k)) = do
         Nothing -> errorOrExec (\x -> modify (insertVal c x)) res1
     let end = fromRight (IntNum pc) res2
     let step = fromRight (IntNum 1) res3
+    let start = fromRight (IntNum 0) res1
+    let comp = if (step < (IntNum 0)) then (<) else (>)
+    -- (liftIO.putStrLn) ""
+    -- (liftIO.putStrLn) ((show end))
+    -- skip if start > end
+    if (start `comp` end) then modify setSkip else return ()
     modify $ insertIter c end pc step
 
 exec (NextCom []) = return ()
@@ -113,6 +119,7 @@ exec (NextCom (c : cs)) = do
             if (addNums val k) `comp` i
                 then ((modify (incr c val k)) >> (modify (putPC j))) >> modify setGoto
                 else (modify $ delVal c) >> (exec (NextCom cs))
+    modify unsetSkip
     where incr c i k = insertVal c (addNums i k)
 
 exec (InputCom s cs) = (liftIO . putStrLn) s >> input cs
@@ -162,7 +169,10 @@ run = do
     let (c, next) = case M.lookup pc prog of
             Just (com, nextl) -> (com, nextl)
             Nothing           -> ((PrintCom (LiteralExpr "Error")), -1)
-    exec c
+    --if (not (skipFlag s)) then exec c else return ()
+    case c of
+        (NextCom _) -> exec c
+        _           -> if (not (skipFlag s)) then exec c else return ()
     news <- get
     -- get the new PC after modification
     let (c, next) = case M.lookup (getPC news) prog of
@@ -186,4 +196,4 @@ start :: Map Integer (Com, Integer) -> Integer -> IO ()
 start prog init = evalStateT (runReaderT (initGen >> run) env) state
     where
         env   = ProgEnv prog
-        state = ProgState init M.empty (mkStdGen 0) M.empty [] False empty
+        state = ProgState init M.empty (mkStdGen 0) M.empty [] False empty False

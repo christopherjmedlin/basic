@@ -92,7 +92,8 @@ data ProgState = ProgState {getPC :: Integer,
                             getIters :: Map Char (Number, Integer, Number),
                             getStack :: [Integer],
                             gotoFlag :: Bool,
-                            getArrMap :: Map Char Arr}
+                            getArrMap :: Map Char Arr, 
+                            skipFlag :: Bool}
 
 putPC :: Integer -> ProgState -> ProgState
 putPC i s = ProgState i (getValMap s)
@@ -101,50 +102,57 @@ putPC i s = ProgState i (getValMap s)
                         (getStack s)
                         (gotoFlag s)
                         (getArrMap s)
+                        (skipFlag s)
 
 insertVal :: Char -> Number -> ProgState -> ProgState
-insertVal c n (ProgState pc v g i s go a) = ProgState pc (insert c n v) g i s go a
+insertVal c n (ProgState pc v g i s go a sk) = ProgState pc (insert c n v) g i s go a sk
 
 delVal :: Char -> ProgState -> ProgState
-delVal c (ProgState pc v g i s go a) = ProgState pc (delete c v) g i s go a
+delVal c (ProgState pc v g i s go a sk) = ProgState pc (delete c v) g i s go a sk
 
 putGen :: StdGen -> ProgState -> ProgState
-putGen g (ProgState pc v _ i s go a) = ProgState pc v g i s go a
+putGen g (ProgState pc v _ i s go a sk) = ProgState pc v g i s go a sk
 
 insertIter :: Char -> Number -> Integer -> Number -> ProgState -> ProgState
-insertIter c n1 n2 n3 (ProgState pc v g i s go a) = ProgState pc v g (insert c (n1, n2, n3) i) s go a
+insertIter c n1 n2 n3 (ProgState pc v g i s go a sk) = ProgState pc v g (insert c (n1, n2, n3) i) s go a sk
 
 pushStack :: Integer -> ProgState -> ProgState
-pushStack i (ProgState p v g it s go a) = ProgState p v g it (i : s) go a
+pushStack i (ProgState p v g it s go a sk) = ProgState p v g it (i : s) go a sk
 
 peekStack :: ProgState -> Integer
-peekStack (ProgState _ _ _ _ s _ _) = head s
+peekStack (ProgState _ _ _ _ s _ _ _) = head s
 
 -- doesn't return the result, gotta use peek for that
 popStack :: ProgState -> ProgState
-popStack (ProgState p v g i s go a) = ProgState p v g i (tail s) go a
+popStack (ProgState p v g i s go a sk) = ProgState p v g i (tail s) go a sk
 
 setGoto :: ProgState -> ProgState
-setGoto (ProgState p v g it s _ a) = ProgState p v g it s True a
+setGoto (ProgState p v g it s _ a sk) = ProgState p v g it s True a sk
 
 unsetGoto :: ProgState -> ProgState
-unsetGoto (ProgState p v g it s _ a) = ProgState p v g it s False a
+unsetGoto (ProgState p v g it s _ a sk) = ProgState p v g it s False a sk
 
 newArr :: Char -> ArrIndex -> ProgState -> ProgState
-newArr c dim (ProgState p v g it s go a) = ProgState p v g it s go new
+newArr c dim (ProgState p v g it s go a sk) = ProgState p v g it s go new sk
     where start = (0,0,0,0)
           end = dim
           arr = array (start,end) []
           new = insert c (arr // [(i,(IntNum 0)) | i <- indices arr]) a
 
 insertArr :: Char -> ArrIndex -> Number -> ProgState -> ProgState
-insertArr c ix val (ProgState p v g it s go a) = ProgState p v g it s go new
+insertArr c ix val (ProgState p v g it s go a sk) = ProgState p v g it s go new sk
     where oldarr = fromJust $ lookup c a
           newarr = oldarr // [(ix, val)]
           new = insert c newarr a
 
 getArr :: Char -> ArrIndex -> Map Char Arr -> Number
 getArr c ix arrs = (fromJust (lookup c arrs)) ! ix
+
+setSkip :: ProgState -> ProgState
+setSkip (ProgState p v g it s go a _) = ProgState p v g it s go a True
+
+unsetSkip :: ProgState -> ProgState
+unsetSkip (ProgState p v g it s go a sk) = ProgState p v g it s go a False
 
 instance Show Com where
     show (LetCom x a) = "LET " ++ show x ++ " = " ++ show a
