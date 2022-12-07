@@ -64,7 +64,7 @@ subNums (FloatNum i) (FloatNum j) = FloatNum (i - j)
 
 toInt :: Number -> Number
 toInt (IntNum i) = (IntNum i)
-toInt (FloatNum i) = IntNum (round i)
+toInt (FloatNum i) = IntNum (floor i)
 
 toNormalInt :: Number -> Integer
 toNormalInt (IntNum i) = i

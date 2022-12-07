@@ -169,7 +169,6 @@ run = do
     let (c, next) = case M.lookup pc prog of
             Just (com, nextl) -> (com, nextl)
             Nothing           -> ((PrintCom (LiteralExpr "Error")), -1)
-    --if (not (skipFlag s)) then exec c else return ()
     case c of
         (NextCom _) -> exec c
         _           -> if (not (skipFlag s)) then exec c else return ()

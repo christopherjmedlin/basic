@@ -15,7 +15,6 @@ main = do
         else return ()
     s <- readFile (head args)
     let result = parseProgram s
-    putStrLn (show result)
     case result of
         (Left err) -> error (show err)
         (Right p)  -> (uncurry start) p

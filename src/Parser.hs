@@ -294,15 +294,17 @@ nextCom = do
 inputCom :: Parser Com
 inputCom = do
     string "INPUT"
-    spaces
-    s <- literalExpr
-    spaces
-    char ';'
+    x <- optionMaybe $ try (do
+        spaces
+        s <- literalExpr
+        spaces
+        char ';'
+        return s)
     spaces
     cs <- commaSep anyChar
-    case s of
-        LiteralExpr str -> return $ InputCom str cs
-        _ -> fail "Internal error"
+    case x of
+        Just (LiteralExpr str) -> return $ InputCom str cs
+        _ -> return $ InputCom "" cs
 
 goSubCom :: Parser Com
 goSubCom = do
