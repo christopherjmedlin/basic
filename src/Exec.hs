@@ -86,7 +86,9 @@ exec (ForCom c (i, j, k)) = do
     res2 <- evalAndPutGen j
     res3 <- evalAndPutGen k
     let pc = getPC s
-    errorOrExec (\x -> modify (insertVal c x)) res1
+    case (lookup c (getValMap s)) of
+        Just _ -> return ()
+        Nothing -> errorOrExec (\x -> modify (insertVal c x)) res1
     let end = fromRight (IntNum pc) res2
     let step = fromRight (IntNum 1) res3
     modify $ insertIter c end pc step
@@ -100,7 +102,7 @@ exec (NextCom (c : cs)) = do
         Just (i, j, k) -> do
             let val = maybe (IntNum 0) id (M.lookup c (getValMap s))
             if (addNums val k) <= i
-                then ((modify (incr c val k)) >> (modify (putPC j)))
+                then ((modify (incr c val k)) >> (modify (putPC j))) >> modify setGoto
                 else exec (NextCom cs)
     where incr c i k = insertVal c (addNums i k)
 

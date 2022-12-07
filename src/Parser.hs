@@ -170,7 +170,7 @@ noNewTabExpr = do
 concatTabExpr :: Parser Sexpr
 concatTabExpr = ConcatTabExpr <$> left <*> normalSexpr
     where left = do
-            s <- try concatExpr <|> toStringExpr <|> literalExpr
+            s <- toStringExpr <|> literalExpr
             char ','
             many (char ' ')
             return s
@@ -209,7 +209,7 @@ letCom = do
 printCom :: Parser Com
 printCom = do
     string "PRINT"
-    s <- try $ (do {many (char ' '); optionMaybe sexpr})
+    s <- try $ (do {optionMaybe $ (many (char ' ')) >> sexpr})
     case s of
         Just s -> return $ PrintCom s
         Nothing -> return $ PrintCom $ LiteralExpr ""
